@@ -48,6 +48,7 @@ jobs:
       - image: tmknom/redpen:1.0.0
     steps:
       - install_ca_certificates
+      - install_git
       - attach_workspace:
           at: .
       - run: .circleci/scripts/redpen.sh
@@ -80,3 +81,6 @@ commands:
   install_ca_certificates:
     steps:
       - run: apk --update add ca-certificates
+  install_git:
+    steps:
+      - run: apk --update add git
