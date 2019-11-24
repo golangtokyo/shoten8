@@ -23,6 +23,8 @@ jobs:
   prepare:
     docker:
       - image: vvakame/review:4.0
+        environment:
+          REVIEWDOG_VERSION: 0.9.12
     steps:
       - checkout
       - restore_cache:
