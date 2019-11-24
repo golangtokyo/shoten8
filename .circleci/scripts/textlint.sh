@@ -1,5 +1,5 @@
 #!/bin/sh
-$(shell npm bin)/textlint --format checkstyle --config .textlintrc articles/*.re > \
+$(npm bin)/textlint --format checkstyle --config .textlintrc articles/*.re > \
 textlint.log || EXIT_CODE=$?
 
 cat textlint.log | bin/reviewdog -reporter=github-pr-review \
