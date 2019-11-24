@@ -1,6 +1,26 @@
-version: 2
+version: 2.1
+
+workflows:
+  version: 2
+  default:
+    jobs:
+      - prepare
+      - redpen:
+          requires:
+            - prepare
+      - textlint:
+          requires:
+            - prepare
+      - generate:
+          requires:
+            - redpen
+            - textlint
+      - notify:
+          requires:
+            - generate
+
 jobs:
-  build:
+  prepare:
     docker:
       - image: vvakame/review:4.0
     steps:
@@ -11,16 +31,45 @@ jobs:
       - run:
           name: Setup
           command: npm install
+      - run:
+          name: Install reviewdog
+          command: "curl -sfL https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh| sh -s  v$REVIEWDOG_VERSION"
       - save_cache:
           key: npm-cache-{{ checksum "package-lock.json" }}
           paths:
             - ./node_modules
-      - run:
-          name: Test
-          command: npm test
-      - run:
-          name: Build PDF
-          command: npm run pdf
+      - persist_to_workspace:
+          root: .
+          paths: .
+  redpen:
+    docker:
+      - image: tmknom/redpen:1.0.0
+    steps:
+      - attach_workspace:
+          at: .
+      - run: .circleci/scripts/redpen.sh
+  textlint:
+    docker:
+      - image: vvakame/review:4.0
+    steps:
+      - attach_workspace:
+          at: .
+      - run: .circleci/scripts/textlint.sh
+  generate:
+    docker:
+      - image: vvakame/review:4.0
+    steps:
+      - attach_workspace:
+          at: .
+      - run: npm run pdf
       - store_artifacts:
-          path: ./articles/ReVIEW-Template.pdf
+          path: articles/ReVIEW-Template.pdf
           destination: ReVIEW-Template.pdf
+  notify:
+    docker:
+      - image: circleci/buildpack-deps
+    steps:
+      - attach_workspace:
+          at: .
+      - run: .circleci/scripts/notify.sh
+
