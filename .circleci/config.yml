@@ -47,6 +47,7 @@ jobs:
     docker:
       - image: tmknom/redpen:1.0.0
     steps:
+      - install_ca_certificates:
       - attach_workspace:
           at: .
       - run: .circleci/scripts/redpen.sh
@@ -75,3 +76,7 @@ jobs:
           at: .
       - run: .circleci/scripts/notify.sh
 
+commands:
+  install_ca_certificates:
+    steps:
+      - run: apk --update add ca-certificates
