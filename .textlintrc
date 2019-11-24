@@ -1,0 +1,51 @@
+{
+  "rules": {
+    // ja-technical-writing/xxxというルールを制御する設定
+    "preset-ja-technical-writing": {
+      "sentence-length": {
+        max: 100
+      },
+      "max-ten": {
+        "max": 3
+      }
+    },
+    "prh": {
+      "rulePaths": [
+        "./prh.yml"
+      ]
+    }
+  },
+  "plugins": [
+    "review"
+  ],
+  "filters": {
+    // 特定の行ではtextlintを無視するための設定。
+    // Usage:
+    // #@#（Re:VIEWのコメント記法）を使ってtextlintを無視したい部分を囲みます。
+    //
+    // #@# textlint-disable
+    //
+    // textlintを無視したい行。必ず前後に空白行を入れること。
+    //
+    // #@# textlint-enable
+    //
+    // 詳細は参考リンクで確認してください。
+    //
+    // 参考
+    // https://github.com/textlint/textlint-filter-rule-comments
+    // https://qiita.com/azu/items/0f8ca9f1fd531d6b2f4b
+    "comments": {
+      // enable comment directive
+      // if comment has the value, then enable textlint rule
+      "enablingComment": "textlint-enable",
+      // disable comment directive
+      // if comment has the value, then disable textlint rule
+      "disablingComment": "textlint-disable"
+    },
+    "whitelist": {
+      "whitelistConfigPaths": [
+        "./allow.yml",
+      ]
+    }
+  }
+}
