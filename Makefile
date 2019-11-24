@@ -10,6 +10,9 @@ lint: ## Execute textlint
 fixlint: ## Fix textlint error
 	@$(shell npm bin)/textlint --fix articles/*.re
 
+codepen: ## Execute codepen
+	@docker run --rm -v ${PWD}:/work tmknom/redpen:1.0.0 --conf redpen-conf-ja.xml --lang ja --format review --limit 0 articles/*.re
+
 build: ## Build PDF in Docker
 	@./build-in-docker.sh
 
