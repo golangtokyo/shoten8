@@ -67,8 +67,8 @@ jobs:
           at: .
       - run: npm run pdf
       - store_artifacts:
-          path: articles/ReVIEW-Template.pdf
-          destination: ReVIEW-Template.pdf
+          path: articles/golangtokyo-shoten8.pdf
+          destination: golangtokyo-shoten8.pdf
   notify:
     docker:
       - image: circleci/buildpack-deps
