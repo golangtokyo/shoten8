@@ -27,7 +27,7 @@
         <!-- <validator name="DoubledJoshi" /> -->  <!-- 指摘が多すぎて厳しい。 -->
         <!-- <validator name="NumberFormat" /> --> <!-- Android 4.0.1とかに引っかかる。つらい -->
         <validator name="FrequentSentenceStart" />
-        <validator name="WordFrequency" />
+        <!-- <validator name="WordFrequency" /> --> <!-- ローカルで動かない && 英語のみ対応のようなので切る -->
         <!-- <validator name="JapaneseAmbiguousNounConjunction" /> --> <!-- 頻出するが読みやすさに致命傷を与えるとは考え難い・・・今回はSkipで要検討としたい -->
         <!-- てくぶルールとバージョンナンバーの記述で相性が悪かったため
         <validator name="JapaneseNumberExpression">

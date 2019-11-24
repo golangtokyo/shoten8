@@ -29,7 +29,15 @@
     "web": "grunt web",
     "test": "npm run html"
   },
-  "dependencies": {},
+  "dependencies": {
+    "prh": "^5.4.4",
+    "textlint": "^11.3.1",
+    "textlint-filter-rule-comments": "^1.2.2",
+    "textlint-filter-rule-whitelist": "^2.0.0",
+    "textlint-plugin-review": "^0.3.3",
+    "textlint-rule-max-ten": "^2.0.3",
+    "textlint-rule-preset-ja-technical-writing": "^3.1.3"
+  },
   "devDependencies": {
     "grunt": "^1.0.4",
     "grunt-cli": "^1.2.0",
