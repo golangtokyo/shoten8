@@ -1,5 +1,5 @@
 #!/bin/sh
-redpen --lang ja --format review --limit 0 --conf redpen-conf.xml \
+redpen --lang ja --format review --limit 0 --conf redpen-conf-ja.xml \
 articles/*.re > redpen.log || EXIT_CODE=$?
 
 sed -i'' -e 's$^$articles/$' -e '$d' redpen.log
