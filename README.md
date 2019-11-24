@@ -3,7 +3,7 @@
 
 [circleci]:https://circleci.com/gh/golangtokyo/shoten8
 
-このリポジトリはRe:VIEWを使って技術書典7用の文書を書くリポジトリです。Re:VIEWバージョン4.0を使っています。
+このリポジトリはRe:VIEWを使って技術書典8用の文書を書くリポジトリです。Re:VIEWバージョン4.0を使っています。
 
 
  * [B5紙面サンプル（PDF）](https://github.com/TechBooster/ReVIEW-Template/tree/master/pdf-sample/TechBooster-Template-B5.pdf)
