@@ -44,8 +44,16 @@
     },
     "whitelist": {
       "whitelistConfigPaths": [
-        "./allow.yml",
+        "./allow.yml"
       ]
+    },
+    "node-types": {
+      // reviewプラグインでは、tt命令はTeletypeとしてパースされる。
+      // TeletypeはNodeタイプが'Inline'としてtextlint本体に解釈される。
+      // 参考
+      // https://github.com/orangain/textlint-plugin-review/blob/7d660f45a6a81a3456059ed7dfc598df253a2ca8/src/inline-parsers.js#L32
+      // https://github.com/orangain/textlint-plugin-review/blob/7d660f45a6a81a3456059ed7dfc598df253a2ca8/src/mapping.js#L49
+      "nodeTypes": ["Inline"]
     }
   }
 }
