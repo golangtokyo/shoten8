@@ -8,3 +8,6 @@
 それならばGo言語。
 
 始めてみようGo言語。
+
+@<code>{git commit --amend}はエラーにしてほしくない。（デフォルトで無視される）
+@<tt>{git commit --amend}はエラーにしてほしくない。
