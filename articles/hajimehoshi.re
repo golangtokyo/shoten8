@@ -87,9 +87,8 @@ GitHubのように複数のコミットを積み重ねて1つの成果物を作�
 現在の変更のコメントを編集します。
 ほとんどの場合において@<tt>{git commit}または@<tt>{git commit --amend}と同じです。
 また、必要ならばブランチも作成されます。
-実際のところ、筆者はこのコマンドをあまり使わずに@<tt>{git commit --amend}してしまっています。
 
-意図的に回避しない限り、@<tt>{change}はコミットを1個にまとめようとします。
+実際のところ、筆者はこのコマンドをあまり使わずに@<tt>{git commit --amend}してしまっています。
 
 === @<tt>{mail}
 
@@ -109,6 +108,12 @@ Gerrit上でもコミットメッセージの更新は可能なのですが、@<
 レビュアーはそのCLの差分のみをみてレビューするわけです。
 
 //image[hajimehoshi/relation_chain][Relation chain]
+
+複数コミットを送信する場合は、次のようにブランチを明示的に指定しなければなりません。
+
+//cmd{
+git codereview mail HEAD
+//}
 
 //footnote[chain_patch][@<href>{https://go-review.googlesource.com/c/mobile/+/210477}]
 
