@@ -109,7 +109,7 @@ Gerrit上でもコミットメッセージの更新は可能なのですが、@<
 
 //image[hajimehoshi/relation_chain][Relation chain]
 
-複数コミットを送信する場合は、次のようにブランチを明示的に指定しなければなりません。
+複数コミットを送信する場合は、次のように先頭コミットを明示的に指定しなければなりません。
 
 //cmd{
 git codereview mail HEAD
