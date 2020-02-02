@@ -1,19 +1,20 @@
 = Go本体にコントリビュートする方法
 
 本稿はGo本体およびGo周辺ツールへのコントリビュートをする方法のまとめです。
-主にGit拡張の@<tt>{codechange}や、コードレビューツールであるGerritの使い方について解説します。
+主にGit拡張の@<tt>{codechange}や、コードレビューツールであるGerrit@<fn>{gerrit}の使い方について解説します。
 Go本体のソースコードの解説はしません。むしろ筆者が知りたい。
 
 筆者は本体および周辺ツールに、いくつか変更をコミットした経験があります。
 コミット方法はドキュメント化されている@<fn>{contribute}ものの、慣習的な部分について暗黙知が多い分野に思われます。
 本稿が実際にコントリビュートする際の手助けになれば幸いです。
 
+//footnote[gerrit][@<href>{https://www.gerritcodereview.com/}]
 //footnote[contribute][@<href>{https://golang.org/doc/contribute.html}]
 
 == リポジトリ
 
 GoはGoogle SourceのGitリポジトリで管理されています@<fn>{repo}。
-Go本体ではなく、@<tt>{golang.org/x}配下のツールもGoogle Sourceリポジトリで管理されています。
+Go本体だけではなく、@<tt>{golang.org/x}配下のツールもGoogle Sourceリポジトリで管理されています。
 コントリビュート方法はいずれも同じです。
 
 //footnote[repo][@<href>{https://go-review.googlesource.com/admin/repos}]
@@ -64,7 +65,8 @@ Gerrit上でのレビューはCLという単位で行われます。
 
 CLは名前のとおりリストであり、複数のパッチ（変更差分）が含まれます。
 CLに対してパッチは追加はできますが、削除はできません。
-CLにパッチを追加する場合は、基本的に@<tt>{git commit --amend}と同等の操作を行い、
+CLを新規作成する場合は、ローカルでブランチを切って新しいGitコミットを作り、それをアップロードします。
+CLを修正する場合、つまりCLにパッチを追加する場合は、基本的に@<tt>{git commit --amend}と同等の操作を行い、
 最後のGitコミットを上書き更新します。
 手元には1つのGitコミットしか残りませんが、Gerrit上には過去のパッチが残り続けます。
 最後にCLをサブミットしてマージする場合は、最後のパッチが採用されます。
@@ -74,9 +76,9 @@ Gerritは、GitHubのPull Requestにたとえると常時Squash & Rebaseして�
 GerritはGitの1コミットを洗練させて完成させるための仕組みです。
 GitHubのように複数のコミットを積み重ねて1つの成果物を作るのとは異なります。
 
-@<tt>{git-codereview}はGerritに対しての操作を簡単に行うためのツールです@<fn>{cl}。
-
 //footnote[cl][余談ですが、プロジェクトによってはGerritを操作するのに別のツールを使ったりします。たとえばChromiumプロジェクトは@<tt>{depot_tools}にある@<tt>{git-cl}というのを使います。]
+
+次節から、@<tt>{git-codereview}のサブコマンドの解説をしていきます。
 
 === @<tt>{help}
 
@@ -150,11 +152,11 @@ https://golang.org/cl/214899
 
 //image[hajimehoshi/gerrit][Gerrit]
 
-この図を参考に、UIの各部分について説明します。
+この@<img>{hajimehoshi/gerrit}を参考に、UIの各部分について説明します。
 
 === タイトル
 
-図でいうところの、「@<tt>{cmd/gomobile:}」で始まる一行だけの部分です。
+@<img>{hajimehoshi/gerrit}でいうところの、「@<tt>{cmd/gomobile:}」で始まる一行だけの部分です。
 コミットメッセージの一行目がそのまま採用されます。
 
 慣習として、変更に関連するディレクトリ名から始まり、CLの概要が続きます。
@@ -213,7 +215,7 @@ CLは誰でもApproveできるわけではなく、権限を持った人のみ�
 
 今回の例でいうとHana氏が+2評価をしてくれたおかげでサブミットできています。
 
-なおこの表はGoにおける数字の意味であって、他プロジェクトでは異なる意味付けをしている可能性があります。
+なおこの@<table>{gerrit_score}はGoにおける数字の意味であって、他プロジェクトでは異なる意味付けをしている可能性があります。
 
 === TryBot-Result
 
