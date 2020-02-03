@@ -11,3 +11,5 @@
 
 @<code>{git commit --amend}はエラーにしてほしくない。（デフォルトで無視される）
 @<tt>{git commit --amend}はエラーにしてほしくない。
+
+ほかの言語。
