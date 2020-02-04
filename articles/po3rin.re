@@ -99,20 +99,11 @@ Raftでは@<b>{ターム}という時間の分割単位があり、選挙開始�
 //footnote[raft-viz][@<href>{http://thesecretlivesofdata.com/raft/}]
 //footnote[slide][@<href>{https://www.slideshare.net/pfi/raft-36155398}]
 
-== GoのRaftパッケージを使った分散システムの実装
+== Goでシンプルなキーバリューストアを実装する
 
-実際にGoでRaftアルゴリズムを使った分散システムを作ってみましょう。Raftアルゴリズムをゼロから実装するのはかなり骨の折れる作業です。ありがたいことにGoにおいて、様々なRaftパッケージが存在します。今回は既存のRaftパッケージを使ったを分散システムの開発方法を紹介します。本番利用もされているRaftパッケージでは@<b>{github.com/etcd-io/etcd/raft}@<fn>{etcd}や@<b>{github.com/hashicorp/raft}@<fn>{hashi}があります。etcdのraftはその名のとおりKubernetesの内部などで
-使われている@<b>{etcd}@<fn>{etcd}での利用を目的として作られたRaftパッケージです。hashicorpのraftパッケージはネットワーキングサービスである@<b>{Consul}@<fn>{consul}などで利用されています。筆者が2つのパッケージを比べたところ、etcd/raftの方がRaftアルゴリズムのコアのみにフォーカスして作られており、最小限の設計哲学にしたがっています。そのため今回の開発ではRaftの勉強もかねてetcd/raftを使ってみましょう。
+この節では分散キーバリューストアを実装する前段階としてシンプルなキーバリューストアを作ってみましょう。HTTPリクエストを受けてデータを操作します。図にすると@<img>{kv}のようになります。
 
-//footnote[etcd][@<href>{https://github.com/etcd-io/etcd}]
-//footnote[hashi][@<href>{https://github.com/hashicorp/raft}]
-//footnote[consul][@<href>{https://github.com/hashicorp/consul}]
-
-== Goで単純なキーバリューストアを実装する
-
-この節では分散キーバリューストアを実装する前段階として単純なキーバリューストアを作ってみましょう。HTTPリクエストを受けてデータを操作します。図にすると@<img>{kv}のようになります。
-
-//image[kv][単純なキーバリューストア][scale=0.9]{
+//image[kv][シンプルなキーバリューストア][scale=0.9]{
 //}
 
 この節では最終的には@<list>{tree1}のようなファイル構成になります。
@@ -296,11 +287,32 @@ $ curl http://localhost:9121/a
 {"a":"b"}
 //}
 
-ちゃんとPUTで保存したデータがGETで取得できています。
+ちゃんとPUTで保存したデータがGETで取得できています。ここからがいよいよ本番です。次の節からキーバリューストアをRaftに対応させていきます。
 
-=== Raftで分散キーバリューストアを実装する
+== Raftパッケージ比較
 
-さぁここからが本番です。分散アルゴリズムRaftに対応させましょう。一気に完璧なRaftを構築する前に必要な機能をstep-by-stepで実装しつつ動作確認できたら次の機能を実装という形で進めていきます。この項では最終的に@<list>{tree2}ような構成になります。
+Raftアルゴリズムをゼロから実装するのはかなり骨の折れる作業です。ありがたいことにGoにおいて、様々なRaftパッケージが存在します。今回は既存のRaftパッケージを使ったを分散システムの開発方法を紹介します。本番利用もされているRaftパッケージでは@<b>{github.com/etcd-io/etcd/raft}@<fn>{etcd}や@<b>{github.com/hashicorp/raft}@<fn>{hashi}があります。etcdのraftはその名のとおりKubernetesの内部などで使われている@<b>{etcd}@<fn>{etcd}での利用を目的として作られたRaftパッケージです。hashicorpのraftパッケージはネットワーキングサービスである@<b>{Consul}@<fn>{consul}などで利用されています。筆者が2つのパッケージを比べたところ、etcd/raftの方がRaftアルゴリズムのコアのみにフォーカスして作られており、最小限の設計哲学にしたがっています。そのため今回の開発ではRaftの勉強もかねてetcd/raftを使ってみましょう。
+
+//footnote[etcd][@<href>{https://github.com/etcd-io/etcd}]
+//footnote[hashi][@<href>{https://github.com/hashicorp/raft}]
+//footnote[consul][@<href>{https://github.com/hashicorp/consul}]
+
+== Raftを利用するraftalgパッケージを実装する
+
+=== 実装方針
+
+一気に完璧なRaftを構築する前に必要な機能をstep-by-stepで実装しつつ動作確認できたら次の機能を実装という形で進めていきます。
+先ほどお話したとおり、今回使うetcd/raftパッケージはRaftアルゴリズムのコアのみにフォーカスして実装されています。ログのコンセンサスをRaftにお願いする手前までや、エントリの保存、コミット済みのエントリの扱いなどはこちらで実装する必要があります。そのためまずはRaftアルゴリズムを利用するための責務をもつraftalgパッケージを作ります。ここでは外部から依頼を受けてRaftアルゴリズムに処理を渡す部分と、Raftアルゴリズムからの結果を処理する仕事があります。少しコードが複雑になるので図にしてみました(@<img>{arch})。
+
+//image[arch][大雑把にraftalgパッケージが行うことの構成図][scale=1]{
+//}
+
+このraftalgパッケージを使うと先ほどの実装(@<img>{kv})が@<img>{arch2}のように変わります。
+
+//image[arch2][storeからraftalgパッケージを利用する][scale=1]{
+//}
+
+また、@<img>{arch}をみて分かるとおりRaftで別のノードと通信する必要があるのでそれらの管理もこのraftalgパッケージの責務です。etcd/raftが本当にRaftアルゴリズムのコアだけに集中して作られたパッケージだということが見て取れます。この節では最終的に@<list>{tree2}ような構成になります。
 
 //list[tree2][最終的な構成][go]{
 .
@@ -315,17 +327,9 @@ $ curl http://localhost:9121/a
     └── store.go
 //}
 
-今回使うetcd/raftパッケージはRaftアルゴリズムのコアのみにフォーカスして実装されています。ログのコンセンサスをRaftにお願いする手前までや、エントリの保存、コミット済みのエントリの扱いなどはこちらで実装する必要があります。まずはRaftアルゴリズムを利用するための責務をもつraftalgパッケージを作ります。ここでは外部から依頼を受けてRaftアルゴリズムに処理を渡す部分と、Raftアルゴリズムからの結果を処理する仕事があります。少しコードが複雑になるので図にして見ました(@<img>{arch})。
+=== Raftノードの起動準備
 
-//image[arch][大雑把にraftalgパッケージが行うことの構成図][scale=1]{
-//}
-
-このraftalgパッケージを使うと先ほどの実装(@<img>{kv})が@<img>{arch2}のように変わります。
-
-//image[arch2][storeからraftalgパッケージを利用する][scale=1]{
-//}
-
-また、@<img>{arch}をみて分かるとおりRaftで別のノードと通信する必要があるのでそれらの管理もこのraftalgパッケージの責務です。etcd/raftが本当にRaftアルゴリズムのコアだけに集中して作られたパッケージだということが見て取れます。まずは@<code>{raftalg/raftalg.go}に構造体と関数を定義します。
+まずは@<code>{raftalg/raftalg.go}に構造体と関数を定義します。
 
 //list[raftalg1][raftalgパッケージ][go]{
 package raftalg
@@ -406,7 +410,11 @@ func (r *RaftAlg) Run(ctx context.Context) error {
 }
 //}
 
-これでクラスタのノードの起動に必要なもの（@<code>{raft.Config}型と@<code>{[]raft.Peer}型）が準備できたのでノードを起動します。Raftノードの起動には2パターンがあり、新規起動と再起動の２つがあります。どちらを使うかはWALの保存用ディレクトリが存在するかどうかで決定しましょう。WAL（Write-Ahead Log）は文字どおり、writeする前にlogを保存しておくことです。Raftの文脈においてはログと同じ意味です。State machine への入力をエントリとしてログに保存すると説明したのを思い出してください。WALのI/Oに関しては便利なetcd/raft/walパッケージが提供されています。WAL保存用のディレクトリの存在チェックとログのリプレイを行った後にノードを起動するようにします(@<list>{wal})。
+これでクラスタのノードの起動に必要なもの（@<code>{raft.Config}型と@<code>{[]raft.Peer}型）が準備できました。
+
+=== Raftノードの起動とWALのリプレイ
+
+さっそくノードを起動します。Raftノードの起動には2パターンがあり、新規起動と再起動の２つがあります。どちらを使うかはWALの保存用ディレクトリが存在するかどうかで決定しましょう。WAL（Write-Ahead Log）は文字どおり、writeする前にlogを保存しておくことです。Raftの文脈においてはログと同じ意味です。State machine への入力をエントリとしてログに保存すると説明したのを思い出してください。WALのI/Oに関しては便利なetcd/raft/walパッケージが提供されています。WAL保存用のディレクトリの存在チェックとログのリプレイを行った後にノードを起動するようにします(@<list>{wal})。
 
 //list[wal][WALのreplayとノードの起動][go]{
 func (r *RaftAlg) Run(ctx context.Context) error {
@@ -473,7 +481,12 @@ func (r *RaftAlg) replayWAL(ctx context.Context) (*wal.WAL, error) {
 }
 //}
 
-@<list>{replayWAL}から分かるとおり今回WALはfileで保存しています。WALに保存されたログを取得して、メモリストレージに移します。その後に、WALのreplayを待っているストアにチャネルで終了を通知します。これでノード再起動時などにログを復元できます。ログがメモリストレージに移せたら、キーバリューストアにデータ操作行うメソッドである@<code>{*RaftAlg.publishEntries}をコールします。ちなみにselect文ではreplayの終了を通知するチャネルの送信と同時にタイムアウトとcontextパッケージによる割り込みを可能にしています。タイムアウトに関してはreplayを通知する相手がまだ立ち上がっていないのは何らかの問題があるとして処理を中断する必要があるからです。これから何回か出てくる実装パターンなので覚えておきましょう。それではraftStorageにappendされたエントリを適用する為の@<code>{*RaftAlg.publishEntries}メソッドを実装しましょう(@<list>{publish})。
+@<list>{replayWAL}から分かるとおり今回WALはfileで保存しています。WALに保存されたログを取得して、メモリストレージに移します。その後に、WALのreplayを待っているストアにチャネルで終了を通知します。これでノード再起動時などにログを復元できます。ログがメモリストレージに移せたら、キーバリューストアにデータ操作行うメソッドである@<code>{*RaftAlg.publishEntries}をコールします。ちなみにselect文ではreplayの終了を通知するチャネルの送信と同時にタイムアウトとcontextパッケージによる割り込みを可能にしています。タイムアウトに関してはreplayを通知する相手がまだ立ち上がっていないのは何らかの問題があるとして処理を中断する必要があるからです。これから何回か出てくる実装パターンなので覚えておきましょう。
+
+
+=== エントリの配送
+
+それではエントリをState machineに適用する為の@<code>{*RaftAlg.publishEntries}メソッドを実装しましょう(@<list>{publish})。
 
 //list[publish][publishEntriesの実装][go]{
 
@@ -484,30 +497,35 @@ import (
 )
 
 func (r *RaftAlg) publishEntries(
-    ctx context.Context, ents []raftpb.Entry
+	ctx context.Context, ents []raftpb.Entry
 ) error {
-    for i := range ents {
-        if ents[i].Type != raftpb.EntryNormal ||
-            len(ents[i].Data) == 0 {
-            // EntryNormal 型のエントリのみをサポートする(後述)
-            continue
-            }
-            s := string(ents[i].Data)
+	for i := range ents {
+		if ents[i].Type != raftpb.EntryNormal ||
+		len(ents[i].Data) == 0 {
+			// EntryNormal 型のエントリのみをサポートする(後述)
+			continue
+		}
+		s := string(ents[i].Data)
 
-            select {
-            // 適用して良いをエントリをチャネル経由で通知
-            case r.commitC <- s:
-            case <-time.After(10 * time.Second):
-                return errors.New("timeout 10s while sending commit channel")
-            case <-ctx.Done():
-                return ctx.Err()
-        }
-    }
-    return nil
+		select {
+		// 適用して良いをエントリをチャネル経由で通知
+		case r.commitC <- s:
+		case <-time.After(10 * time.Second):
+			return errors.New("timeout 10s while sending commit channel")
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	return nil
 }
 //}
 
-@<list>{publish}では@<code>{commitC}チャネルにエントリのデータを配送します。ストア側では@<code>{commitC}チャネル経由でキーバリューストアに適用するべき（コミット済み）エントリを受け取って実際の適用（今回の例でいえば@<code>{map[string]string}へのappend）を行います。のちほど説明しますが、etcd/raftにおいてエントリには数種類があります。今は@<code>{raftpb.EntryNormal}型のエントリだけを扱うようにしますが、あとで別のエントリのタイプもサポートします。そしてノードが相互に通信する仕組みも必要です（エントリ追加要求や、ハートビート、投票要求などをしなければなりません）。これはetcd/raftが提供している@<code>{rafthttp.Transporter}というインターフェースが担います。@<code>{*RaftAlg.Run}メソッドの続きを実装しましょう(@<list>{transport})。
+@<list>{publish}では@<code>{commitC}チャネルにエントリのデータを配送します。ストア側では@<code>{commitC}チャネル経由でキーバリューストアに適用するべき（コミット済み）エントリを受け取って実際の適用（今回の例でいえば@<code>{map[string]string}へのappend）を行います。のちほど説明しますが、etcd/raftにおいてエントリには数種類があります。今は@<code>{raftpb.EntryNormal}型のエントリだけを扱うようにしますが、あとで別のエントリのタイプもサポートします。
+
+
+=== Raftノードの通信用サーバーの立ち上げ
+
+ノードが相互に通信する仕組みも必要です（エントリ追加要求や、ハートビート、投票要求などをしなければなりません）。これはetcd/raftが提供している@<code>{rafthttp.Transporter}というインターフェースが担います。@<code>{*RaftAlg.Run}メソッドの続きを実装しましょう(@<list>{transport})。
 
 //list[transport][rafthttp.Transportの利用][go]{
 import (
@@ -534,17 +552,18 @@ func (r *RaftAlg) Run(ctx context.Context) error {
 		ErrorC:      make(chan error),
 	}
 
-    err = r.transport.Start()
-    if err != nil {
-        return err
-    }
-    for i := range r.peers {
-        if i+1 != r.id {
-            r.transport.AddPeer(
-                types.ID(i+1), []string{r.peers[i]},
-            )
-        }
-    }
+	err = r.transport.Start()
+	if err != nil {
+		return err
+	}
+
+	for i := range r.peers {
+		if i+1 != r.id {
+			r.transport.AddPeer(
+				types.ID(i+1), []string{r.peers[i]},
+			)
+		}
+	}
 
 	// ...
 }
@@ -591,7 +610,7 @@ func (r *RaftAlg) Run(ctx context.Context) error {
         err <- r.serveRaftHTTP(ctx)
     }()
     go func() {
-        err <- r.serveChannels(ctx)
+        err <- r.serveChannels(ctx) // あとで実装
     }()
 
     select {
@@ -607,7 +626,9 @@ func (r *RaftAlg) Run(ctx context.Context) error {
 }
 //}
 
-続いて@<code>{*RaftAlg.serveChannels}を実装します(@<list>{serveChannels})。ここでもエラーハンドリングが多いので省略します。
+=== Raftや外部パッケージとのやりとりをチャネルでさばく
+
+続いてRaftとチャネル経由でやりとりする為の@<code>{*RaftAlg.serveChannels}を実装します(@<list>{serveChannels})。ここでもエラーハンドリングが多いので省略します。
 
 //list[serveChannels][serveChannelsの実装][go]{
 func (r *RaftAlg) serveChannels(ctx context.Context) error {
@@ -645,8 +666,7 @@ func (r *RaftAlg) serveChannels(ctx context.Context) error {
 }
 //}
 
-ここではコンテキストキャンセルや、トランスポーターからのエラーを受ける以外に、重要な２つのcaseを扱っています。１つ目のcaseは定期的に@<code>{time.Ticker}で実行しなければならない@<code>{raft.Node.Tick}メソッドを実行するケースです。Raftには、ハートビートと選挙タイムアウトの2つの重要なタイムアウトがあると説明しました。etcd/raftパッケージの内部では、時間はTickで抽象化されています。たとえば@<list>{raftalg2}において@<code>{raft.Config.HeartbeatTick}フィールドの値は1に設定しましたが、この数字の単位は何なのかは説明しませんでした。これは@<code>{raft.Node.Tick}メソッドが1回呼び出されるたびにハートビートを送るという意味になっています。2つ目のcaseは@<code>{raft.Node.Ready}メソッド経由でチャネルを受け取る処理です。これは現在のノードの状態を受け取ります。これにはコミット済みのエントリ(@<code>{raft.Ready.rd.CommittedEntries})も含んでいます。このコミット済みエントリはState Mashine（今回の例ではキーバリューストア）に適用できるので、先ほど実装した@<code>{*RaftAlg.publishEntries}に引数として渡してあげます。続いての実装ではraftalgパッケージを利用するパッケージがチャネルを直で触らなくてよいようにチャネルを関数でラップしてあげます(@<list>{wrapChannel})。このパターンは筆者が勝手に@<b>{function wrap channel}パターンと呼んでいます。標準パッケージの@<code>{context.Done}メソッドなどはまさに
-このパターンで実装されており、チャネルを直で触らなくてもよい実装になっています。
+ここではコンテキストキャンセルや、トランスポーターからのエラーを受ける以外に、重要な２つのcaseを扱っています。１つ目のcaseは定期的に@<code>{time.Ticker}で実行しなければならない@<code>{raft.Node.Tick}メソッドを実行するケースです。Raftには、ハートビートと選挙タイムアウトの2つの重要なタイムアウトがあると説明しました。etcd/raftパッケージの内部では、時間はTickで抽象化されています。たとえば@<list>{raftalg2}において@<code>{raft.Config.HeartbeatTick}フィールドの値は1に設定しましたが、この数字の単位は何なのかは説明しませんでした。これは@<code>{raft.Node.Tick}メソッドが1回呼び出されるたびにハートビートを送るという意味になっています。2つ目のcaseは@<code>{raft.Node.Ready}メソッド経由でチャネルを受け取る処理です。これは現在のノードの状態を受け取ります。これにはコミット済みのエントリ(@<code>{raft.Ready.rd.CommittedEntries})も含んでいます。このコミット済みエントリはState Mashine（今回の例ではキーバリューストア）に適用できるので、先ほど実装した@<code>{*RaftAlg.publishEntries}に引数として渡してあげます。続いての実装ではraftalgパッケージを利用するパッケージ（今回の例ではstoreパッケージ）がチャネルを直で触らなくてよいようにチャネルを関数でラップしてあげます(@<list>{wrapChannel})。このパターンは筆者が勝手に@<b>{function wrap channel}パターンと呼んでいます。標準パッケージの@<code>{context.Done}メソッドなどはまさにこのパターンで実装されており、チャネルを直で触らなくてもよい実装になっています。
 
 //list[wrapChannel][チャネルを関数でWrap][go]{
 func (r *RaftAlg) Commit() <-chan string {
@@ -670,7 +690,15 @@ func (r *RaftAlg) Propose(prop []byte) error {
 }
 //}
 
-@<list>{wrapChannel}において@<code>{raft.Node.Propose}関数の結果は先ほど実装した@<code>{*RaftAlg.serveChannels}が@<code>{raft.Node.Ready}関数で受け取る形になっています。これでraftalgパッケージの実装が完了しました。続いてstoreパッケージとserverパッケージを少し修正します。目指す形はもう一度@<img>{arch2}で確認しておきましょう。
+@<list>{wrapChannel}において@<code>{raft.Node.Propose}関数の結果は先ほど実装した@<code>{*RaftAlg.serveChannels}が@<code>{raft.Node.Ready}関数で受け取る形になっています。これでraftalgパッケージの実装が完了しました。
+
+== キーバリューストアをraftalgパッケージでRaftに対応させる
+
+Raftを扱う為のraftalgパッケージができたので、storeパッケージとserverパッケージ、mainパッケージを少し修正して、先ほど作ったキーバリューストアをRaftに対応させます。
+
+=== 既存のキーバリューストアの改修
+
+目指す形はもう一度@<img>{arch2}で確認しておきましょう。
 
 コミットしたエントリがチャネル経由で通知されるので、これをgorutineで待ち構えて実際のデータを保存する場所(@<code>{map[string]string})にappendしてあげます。まずは@<code>{Store}構造体にこちらで定義した@<code>{Raft}インターフェースを埋め込むようにします(@<list>{store2})。
 
@@ -805,7 +833,11 @@ func main() {
 }
 //}
 
-おめでとうございます。Raftアルゴリズムを用いた分散キーバリューストアが完成しました。動的なクラスター再構築などはのちほど実装してきますが、まずはここまでの動作確認をしましょう。ノードを一個一個立ち上げるのは面倒なのでクラスターを一発で立ち上げる為の@<b>{goreman}を入れておきましょう。
+おめでとうございます。ひとまずRaftアルゴリズムを用いた分散キーバリューストアが完成しました。
+
+=== 動作確認で理解するRaft
+
+まずはここまでの動作確認をしましょう。ノードを一個一個立ち上げるのは面倒なのでクラスターを一発で立ち上げる為の@<b>{goreman}を入れておきましょう。
 
 //list[try2][goreman][go]{
 $ go get github.com/mattn/goreman
@@ -897,7 +929,11 @@ tryraft2がdownしていた時に更新が入ったのにもかかわらず、tr
 
 == クラスターの動的な構成変更
 
-今までの実装ではクラスターのノードを起動時に固定しなければなりません。たとえば、運用中にノード数を3から5にしたい時は、またクラスターごと再起動しなければいけません。これでは困るので動的にクラスターのノード数を変更できるようにしてあげましょう。論文にもあるとおり、Raftには構成変更に関するルールが組み込まれています。そのため、当然etcd/raftにもその実装が用意されています。
+今までの実装ではクラスターのノードを起動時に固定しなければなりません。たとえば、運用中にノード数を3から5にしたい時は、またクラスターごと再起動しなければいけません。これでは困るので動的にクラスターのノード数を変更できるようにしてあげましょう。
+
+=== キーバリューストアを動的な構成変更に対応させる
+
+論文にもあるとおり、Raftには構成変更に関するルールが組み込まれています。そのため、当然etcd/raftにもその実装が用意されています。
 まずはRaftノード起動時にこの起動はクラスターへの新規参加なのかを判別しなければいけません。そのため、@<code>{main}関数にjoinフラグを追加してあげます(@<list>{main4})。
 
 //list[main4][joinフラグの追加][go]{
@@ -1110,7 +1146,11 @@ func (h *handler) Delete(c *gin.Context) {
 }
 //}
 
-これで完成です。動作確認をしましょう。まずは先ほどと同様にクラスターを3ノードで立ち上げます@<list>{try6}。
+これで完成です。
+
+=== クラスター構成の動的変更を動作確認
+
+動作確認をしましょう。まずは先ほどと同様にクラスターを3ノードで立ち上げます@<list>{try6}。
 
 //list[try6][クラスター立ち上げ][go]{
 $ goreman -logtime=false start
@@ -1141,7 +1181,7 @@ curl -X DELETE localhost:12380 \
 
 これでクラスターの動的な設定変更機能が完成しました。
 
-=== Next Step
+== Next Step
 
 誌面の都合上、具体的な実装は紹介しませんが、よりイカした実装にするためにはRaft論文にも紹介されている@<b>{Log compaction}をサポートする必要があります。Raftのログは際限なく大きくなっていくので、メモリを食い、replayに多くの時間がかかるなどのいろいろな問題が発生します。そのため、ログに蓄積された不要な情報を破棄する何らかのメカニズムが必要です。Raftではある一定の状態のスナップショットを取得して、それ以前のエントリを破棄することで問題を解決しています。スナップショットの機構を正しく動作させるためのRPCである@<b>{InstallSnapshot RPC}も定義されているので、もしよければ読んで見てください。当然、etcd/raftにもスナップショットの機能があり、使い方もetcd/raftのexample@<fn>{raftexample}に実装があるのでこれを参考にするとよいでしょう。
 
