@@ -4,6 +4,7 @@ PREDEF:
 CHAPS:
   - article.re
   - hajimehoshi.re
+  - gorilla.re
 
 APPENDIX:
 
