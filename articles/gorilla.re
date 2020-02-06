@@ -90,6 +90,7 @@ tsonの主な機能は次になります。
 
 //image[gorilla/tson-edit][tsonによる編集][scale=0.9]
 
+//footnote[about_jq][https://stedolan.github.io/jq/]
 //footnote[about_tson][https://github.com/skanehira/tson]
 
 === ファイラー
@@ -102,6 +103,7 @@ ffは手軽にディレクトリの移動やファイル、ディレクトリの
 @<img>{gorilla/about-ff}はffを使ってファイルをプレビューしている様子です。
 
 //image[gorilla/about-ff][ファイラー][scale=0.9]
+//footnote[about_ff][https://github.com/skanehira/ff]
 
 == TUIツールを作る
 TUIツールをいくつか紹介したところで、実際に簡単なTUIツールを作ってみましょう。
@@ -113,8 +115,134 @@ TUIツールをいくつか紹介したところで、実際に簡単なTUIツ�
 とてもシンプルなTUIなので、みなさんもぜひ一緒に手を動かしながら読み進めましょう。
 
 === ライブラリ
-今回使用するライブラリはtview@<fn>{about-tview}というTUIライブラリです。筆者は普段このライブラリを使用してTUIツールを作っています。
-1点注意ですが、このライブラリはWindowsでは正しく描画されないので、今回作成するアプリもWindowsでも正常に動作しません。
+今回使用するライブラリはtview@<fn>{about_tview}というTUIライブラリです。筆者は普段このライブラリを使用してTUIツールを作っています。
+1点注意ですが、このライブラリはWindowsでは正しく描画されないです。Windowsの方はWSLなどを使って実装してください。
 
-//footnote[about-tview][https://github.com/rivo/tview]
+//footnote[about_tview][https://github.com/rivo/tview]
+
+=== 実装
+実装は大まかに3ステップになります。
+
+1. ファイル一覧を取得
+2. ファイル一覧を表示する画面を作成
+3. ファイルのプレビュー画面を作成し中身を表示する
+
+読者が理解しやすいように、すべてmainパッケージに実装します。なお、ファイル分けはします。
+では、Let's Go！
+
+==== 1. ファイル一覧を取得
+まず、file.goファイルを作成して、@<code>{ioutil}パッケージの@<code>{ReadDir()}関数を使用して、
+@<list>{get_files}のカレントディレクトリ配下のファイル情報のみを取得する関数を作成します。
+
+//listnum[get_files][ファイル一覧を取得][go]{
+package main
+
+import (
+	"io/ioutil"
+	"os"
+)
+
+func Files(dir string) ([]os.FileInfo, error) {
+	fileInfo, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	var files []os.FileInfo
+	for _, f := range fileInfo {
+		if !f.IsDir() {
+			files = append(files, f)
+		}
+	}
+
+	return files, nil
+}
+//}
+
+続いて、file_test.goファイルを作成して、@<list>{test_get_files}のテストを書きます。
+
+//listnum[test_get_files][ファイル一覧取得関数のテスト][go]{
+package main
+
+import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func mkfile(name string) error {
+	f, err := os.Create(name)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return nil
+}
+
+func TestFiles(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		testdir, err := ioutil.TempDir("", "")
+		if err != nil {
+			t.Fatalf("cannot create testdir: %s", err)
+		}
+		defer os.RemoveAll(testdir)
+
+		exceptedFiles := map[string]string{
+			"a.go": "f",
+			"b.md": "f",
+			"tmp":  "d",
+		}
+
+		for f, typ := range exceptedFiles {
+			tmpf := filepath.Join(testdir, f)
+			// if file
+			if typ == "f" {
+				err := mkfile(tmpf)
+				if err != nil {
+					t.Fatalf("create error: %s", err)
+				}
+				// if dir
+			} else if typ == "d" {
+				err := os.Mkdir(tmpf, 0666)
+				if err != nil {
+					t.Fatalf("create error: %s", err)
+				}
+			}
+		}
+
+		files, err := Files(testdir)
+		if err != nil {
+			t.Fatalf("cannot get files: %s", err)
+		}
+
+		for _, f := range files {
+			if _, ok := exceptedFiles[f.Name()]; !ok {
+				msg := "want: a.go or b.md, got: %s"
+				t.Fatalf(msg, f.Name())
+			}
+		}
+	})
+
+	t.Run("failed", func(t *testing.T) {
+		if _, err := Files("xxx"); err == nil {
+			t.Fatalf("failed test: err is nil")
+		}
+	})
+}
+//}
+
+テスト書き終えたら、実行してみましょう。PASSしたらOKです。
+
+//cmd{
+$ go test -v
+=== RUN   TestFiles
+=== RUN   TestFiles/success
+=== RUN   TestFiles/failed
+--- PASS: TestFiles (0.00s)
+    --- PASS: TestFiles/success (0.00s)
+    --- PASS: TestFiles/failed (0.00s)
+PASS
+ok      github.com/skanehira/shoten8-sample-tui 0.007s
+//}
 
