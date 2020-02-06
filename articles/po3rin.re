@@ -1,6 +1,6 @@
 = GoとコンセンサスアルゴリズムRaftによる分散システム構築入門
 
-こんにちは@<b>{@po3rin}@<fn>{po3rin}です。仕事ではメインでGoを使っています。今回は@<b>{コンセンサスアルゴリズム}の1つである@<b>{Raft}@<fn>{raft}の紹介と、実際にGoとRaftパッケージを使った分散システムの開発方法を紹介します。Kubernetesの内部でも使われているetcdや、全文検索エンジンのAlgoria、分散データベースのCockroachDBなど様々な技術の裏でこのRaftアルゴリズムが使われています。Raftの仕組みを知ることで分散システムについてより理解が深まることは間違いありません。本章はコンセンサスアルゴリズム初心者向けであり、Go+Raftによる分散システムの実装方法の紹介を中心に行う為、Raftの説明は仕組みがなんとなく分かる程度にとどめています。本章ではGoでオリジナルの分散システムを実装する入り口に立つことがゴールです。
+こんにちは@<b>{@po3rin}@<fn>{po3rin}です。仕事ではメインでGoを使っています。今回は@<b>{コンセンサスアルゴリズム}の1つである@<b>{Raft}@<fn>{raft}の紹介と、実際にGoとRaftパッケージを使った分散システムの開発方法を紹介します。Kubernetesの内部でも使われているetcdや、全文検索エンジンのAlgoria、分散データベースのCockroachDBなど様々な技術の裏でこのRaftアルゴリズムが使われています。Raftの仕組みを知ることで分散システムについてより理解が深まることは間違いありません。本章はコンセンサスアルゴリズム初心者向けであり、Go+Raftによる分散システムの実装方法の紹介を中心に行う為、Raftの説明は仕組みがなんとなく分かる程度にとどめています。本章ではGoでオリジナルの分散システムを実装する入り口に立つことがゴールです。サンプルコードは@<code>{https://github.com/po3rin/kvraft}にあります。
 
 //footnote[po3rin][@<href>{https://twitter.com/po3rin}]
 //footnote[raft][@<href>{https://raft.github.io/raft.pdf}]
@@ -101,7 +101,7 @@ Raftでは@<b>{ターム}という時間の分割単位があり、選挙開始�
 
 == Goでシンプルなキーバリューストアを実装する
 
-この節では分散キーバリューストアを実装する前段階&Goの復習も兼ねてシンプルなキーバリューストアを作ってみましょう。HTTPリクエストを受けてデータを操作します。図にすると@<img>{kv}のようになります。
+この節では分散キーバリューストアを実装する前段階&Goの復習も兼ねてシンプルなキーバリューストアを作ってみましょう。シンプルなキーバリューストアの完成形は@<code>{https://github.com/po3rin/kvraft/commit/dfbf0a}にあります。HTTPリクエストを受けてデータを操作します。図にすると@<img>{kv}のようになります。
 
 //image[kv][シンプルなキーバリューストア][scale=0.9]{
 //}
@@ -127,23 +127,6 @@ $ cd kvraft
 
 // ****** は置き換えてください
 $ go mod init github.com/******/kvraft
-//}
-
-ちなみに筆者が利用したパッケージは@<list>{gomod}なります。依存パッケージのバージョンが違うと動作しない可能性もあるので注意してください。
-
-//list[gomod][go.mod][]{
-module github.com/******/kvraft
-
-go 1.13
-
-require (
-	github.com/coreos/etcd v3.3.18+incompatible
-	github.com/gin-gonic/gin v1.5.0
-	github.com/pkg/errors v0.8.0
-	go.etcd.io/etcd v0.5.0-alpha.5.0.20191023171146-3cf2f69b5738
-	go.uber.org/zap v1.10.0
-	golang.org/x/sync v0.0.0-20190423024810-112230192c58
-)
 //}
 
 まずはキーバリューストアとなるstoreパッケージを作ります。@<code>{store/store.go}を作ります。(@<list>{store1})。
@@ -300,6 +283,8 @@ Raftアルゴリズムをゼロから実装するのはかなり骨の折れる�
 
 == Raftを利用するraftalgパッケージを実装する
 
+ここからのコードの変更は@<code>{https://github.com/po3rin/kvraft/commit/****}に差分が置いてあります。
+
 === 実装方針
 
 一気に完璧なRaftを構築する前に必要な機能をstep-by-stepで実装しつつ動作確認できたら次の機能を実装という形で進めていきます。
@@ -338,9 +323,9 @@ package raftalg
 import (
 	// ...
 
-	"go.etcd.io/etcd/etcdserver/api/rafthttp"
-	"go.etcd.io/etcd/raft"
-	"go.etcd.io/etcd/wal"
+	"github.com/coreos/etcd/raft"
+	"github.com/coreos/etcd/rafthttp"
+	"github.com/coreos/etcd/wal"
 )
 
 type RaftAlg struct {
@@ -371,6 +356,18 @@ func New(id int, peers []string) *RaftAlg {
 	}
 }
 //}
+
+ここで@<list>{err}のエラーが出る人は@<code>{go.mod}に@<list>{gomod}の記述を追加してバージョンを固定してあげると治ります。詳細はissue@<fn>{issue}へ。
+
+//list[err][importで発生するエラー][txt]{
+github.com/coreos/go-systemd/journal: no matching versions for query "latest"
+//}
+
+//list[gomod][go.modに追加][go]{
+replace github.com/coreos/go-systemd => github.com/coreos/go-systemd/v22 v22.0.0
+//}
+
+//footnote[issue][@<href>{https://github.com/coreos/go-systemd/issues/321}]
 
 @<list>{raftalg1}ではエントリを保存するためのメモリストレージを@<code>{raft.NewMemoryStorage}関数で生成しています。@<code>{id}はノードのIDで@<code>{peers}はクラスター内で通信するメンバーのURLです。@<code>{RaftAlg}のフィールドは実装しながら順次補足します。続いて@<code>{*RaftAlg.Run}メソッドを実装します。これはノードの起動に対する責務を持ちます。そしてRaftの結果がチャネルで渡ってくるのでそれの待ち受けや、ノードが相互に通信するHTTPのListenもRunが起動します。まずはノードを起動するための設定を用意します@<list>{raftalg2}。
 
@@ -447,7 +444,7 @@ func (r *RaftAlg) Run(ctx context.Context) error {
 
 import (
 	// ...
-	"go.etcd.io/etcd/wal/walpb"
+	"github.com/coreos/etcd/wal/walpb"
 	// ...
 )
 
@@ -494,12 +491,12 @@ func (r *RaftAlg) replayWAL(ctx context.Context) (*wal.WAL, error) {
 
 import (
 	// ...
-	"go.etcd.io/etcd/raft/raftpb"
+	"github.com/coreos/etcd/raft/raftpb"
 	// ...
 )
 
 func (r *RaftAlg) publishEntries(
-	ctx context.Context, ents []raftpb.Entry
+	ctx context.Context, ents []raftpb.Entry,
 ) error {
 	for i := range ents {
 		if ents[i].Type != raftpb.EntryNormal ||
@@ -712,7 +709,7 @@ type Raft interface {
 
 type kv struct {
 	Key   string
-	Value string
+	Val string
 }
 
 type Store struct {
@@ -785,6 +782,14 @@ func (s *Store) RunCommitReader(ctx context.Context) error {
 最後にmain.goを修正します。まずはoptionの追加と引数に必要なものを渡すような修正を行います(@<list>{main2})。
 
 //list[main2][main.goの修正①][go]{
+
+import (
+	// ...
+
+	//パッケージ名は変えてください
+	"github.com/******/kvraft/raftalg"
+)
+
 func main() {
     cluster := flag.String(
         "cluster", "http://127.0.0.1:9021", "comma separated cluster peers",
@@ -824,8 +829,7 @@ func main() {
     quit := make(chan os.Signal, 1)
     signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
-	// エラーかシグナルを受けたら defer cancel() で
-	// 他のgorutineを全て止める
+	// エラーかシグナルを受けたら defer cancel()
     select {
     case <-quit:
     case err := <-errC:
@@ -900,16 +904,16 @@ goreman -logtime=false start | grep Raft-debug
 続いてキーバリューストアをAPI経由で操作してみます(@<list>{try5})。
 
 //list[try4][Raftアルゴリズムが正しく動いていることを確認①][go]{
-curl -X PUT localhost:12380 -d '{"key": "hello", "value": "raft"}'
+$ curl -X PUT localhost:12380 -d '{"key": "hello", "value": "raft"}'
 # 結果
 {"hello":"raft"}
 
-curl -X GET localhost:12380/hello
+$ curl -X GET localhost:12380/hello
 # 結果
 {"hello":"raft"}
 
 # 先ほどとは違うエンドポイントにGETしてみる
-curl -X GET localhost:22380/hello
+$ curl -X GET localhost:22380/hello
 # 結果
 {"hello":"raft"}
 //}
@@ -917,27 +921,33 @@ curl -X GET localhost:22380/hello
 clusterのノードすべてにデータが正しく保存されていることがわかります。ここでkvraft2をdownさせた後にデータを更新した後、kvraft2を再起動してみます。どうなるでしょうか(@<list>{try5})。
 
 //list[try5][Raftアルゴリズムが正しく動いていることを確認②][go]{
-#goreman run stop kvraft2 # kvraft2を止める
-curl -X PUT localhost:12380 -d '{"key": "hello", "value": "golang"}'
+# kvraft2を止める
+$ goreman run stop kvraft2
+
+$ curl -X PUT localhost:12380 -d '{"key": "hello", "value": "golang"}'
 # 結果
 {"hello":"golang"}
 
-#goreman run start kvraft2 # kvraft2を再起動
-curl -X GET localhost:22380/hello
+# kvraft2を再起動
+$ goreman run start kvraft2
+
+$ curl -X GET localhost:22380/hello
 # 結果
 {"hello":"golang"}
+
+# Ctrl+Cやらでクラスターを止めたらWALのおかたずけ
+$ rm -r ./kvraft-*
 //}
 
 kvraft2がdownしていた時に更新が入ったのにもかかわらず、kvraft2のノードのストアのデータも正しく更新されています。Raftで正しく分散システムが構築できています。また今回のパッケージの切り方に注目してください。etcd/raftパッケージの利用はraftalgパッケージのみに閉じ込めることに成功しており、storeパッケージに関しては標準パッケージ以外に依存していません。もちろんserverパッケージもstoreパッケージに依存していないのでテストやstoreなどの実装の差し替えも容易になっています。
 
 == クラスターの動的な構成変更
 
-今までの実装ではクラスターのノードを起動時に固定しなければなりません。たとえば、運用中にノード数を3から5にしたい時は、またクラスターごと再起動しなければいけません。これでは困るので動的にクラスターのノード数を変更できるようにしてあげましょう。
+今までの実装ではクラスターのノードを起動時に固定しなければなりません。たとえば、運用中にノード数を3から5にしたい時は、またクラスターごと再起動しなければいけません。これでは困るので動的にクラスターのノード数を変更できるようにしてあげましょう。ここからのコードの変更は@<code>{https://github.com/po3rin/kvraft/commit/****}に差分が置いてあります。
 
 === キーバリューストアを動的な構成変更に対応させる
 
-論文にもあるとおり、Raftには構成変更に関するルールが組み込まれています。そのため、当然etcd/raftにもその実装が用意されています。
-まずはRaftノード起動時にこの起動はクラスターへの新規参加なのかを判別しなければいけません。そのため、@<code>{main}関数にjoinフラグを追加してあげます(@<list>{main4})。
+論文にもあるとおり、Raftには構成変更に関するルールが組み込まれています。そのため、当然etcd/raftにもその実装が用意されています。まずはRaftノード起動時にこの起動はクラスターへの新規参加なのかを判別しなければいけません。そのため、@<code>{main}関数にjoinフラグを追加してあげます(@<list>{main4})。
 
 //list[main4][joinフラグの追加][go]{
 func main() {
