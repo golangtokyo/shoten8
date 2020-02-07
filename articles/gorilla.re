@@ -575,9 +575,9 @@ func (p *PreviewPanel) UpdateView(name string) {
 //}
 
 以上で、ファイルをプレビューするTUIツールは完成です。
-実装が問題なければ@<img>{gorilla/tui_preview_sample}のように起動してプレビューできます。
+実装が問題なければ@<img>{gorilla/preview_tui_sample}のように起動してプレビューできます。
 
-//image[gorilla/tui_preview_sample][プレビューの様子]
+//image[gorilla/preview_tui_sample][プレビューの様子][scale=0.9]
 
 === さいごに
 簡易のプレビューTUIツールを作りましたが、まだ改善余地はあります。たとえばプレビュー画面をスクロールできるようにするなどです。
