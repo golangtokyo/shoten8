@@ -522,7 +522,7 @@ func (p *PreviewPanel) UpdateView(name string) {
  	FilePanel    *FilePanel
 +	PreviewPanel *PreviewPanel
  }
-  
+
  func NewGUI() *GUI {
  	return &GUI{
  		App:          tview.NewApplication(),
@@ -541,23 +541,23 @@ func (p *PreviewPanel) UpdateView(name string) {
  	if err != nil {
  		return err
  	}
- 
+
  	g.FilePanel.SetFiles(files)
  	g.FilePanel.UpdateView()
- 
+
  	file := g.FilePanel.SelectedFile()
  	if file != nil {
 +		g.PreviewPanel.UpdateView(file.Name())
  	}
- 
+
  	g.SetKeybinding()
- 
+
  	grid := tview.NewGrid().SetColumns(0, 0).
  		AddItem(g.FilePanel, 0, 0, 1, 1, 0, 0, true).
 +		AddItem(g.PreviewPanel, 0, 1, 1, 1, 0, 0, true)
- 
+
  	g.Pages.AddAndSwitchToPage("main", grid, true)
- 
+
  	return g.App.SetRoot(g.Pages, true).Run()
  }
 //}
@@ -574,3 +574,14 @@ func (p *PreviewPanel) UpdateView(name string) {
  }
 //}
 
+以上で、ファイルをプレビューするTUIツールは完成です。
+実装が問題なければ@<img>{gorilla/tui_preview_sample}のように起動してプレビューできます。
+
+//image[gorilla/tui_preview_sample][プレビューの様子]
+
+=== さいごに
+簡易のプレビューTUIツールを作りましたが、まだ改善余地はあります。たとえばプレビュー画面をスクロールできるようにするなどです。
+そこは読者のみなさんへの課題とします。ぜひ取り組んでみてください。
+
+本章を読んで、TUIツールを作ってみようかなって気持ちになったら筆者的の目的は達成です。
+こういった小さなツールは作業効率を上げる道具になりますので、ぜひチャレンジしてみてください。
