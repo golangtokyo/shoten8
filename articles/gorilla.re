@@ -319,12 +319,13 @@ func (f *FilePanel) UpdateView() {
 	table := f.Clear()
 
 	for i, fi := range f.files {
-		table.SetCell(i, 0, tview.NewTableCell(fi.Name()))
+		cell := tview.NewTableCell(fi.Name())
+		table.SetCell(i, 0, cell)
 	}
 }
 //}
 
-関数について説明していきます。
+各関数について説明していきます。
 
 @<code>{SetFiles()}は@<code>{Files}で取得したファイル情報を@<code>{FilePanel.files}にセットします。
 @<code>{NewFilePanel()}でfilesにセットしてもよいですが、役割が異なるので別関数として切り出します。
@@ -345,6 +346,85 @@ table.SetCell(0, 1, tview.NewTableCell("1行2列目"))
 table.SetCell(1, 0, tview.NewTableCell("2行1列目"))
 table.SetCell(1, 1, tview.NewTableCell("2行2列目"))
 //}
+
+ファイル一覧を表示して、選択する画面の実装は以上です。
+次に@<code>{gui.go}ファイルを作成して、@<code>{about_gui}のファイル一覧画面とプレビュー画面を管理する役割を持つ構造体GUIとそれを生成するNew関数を用意します。
+
+//listnum[about_gui][画面を管理するためのGUI構造体][go]{
+package main
+
+import (
+	"os"
+
+	"github.com/rivo/tview"
+)
+
+type GUI struct {
+	App       *tview.Application
+	Pages     *tview.Pages
+	FilePanel *FilePanel
+}
+
+func NewGUI() *GUI {
+	return &GUI{
+		App:       tview.NewApplication(),
+		Pages:     tview.NewPages(),
+		FilePanel: NewFilePanel(),
+	}
+}
+
+//}
+
+@<code>{tview.Application}はtview全体を制御します。TUIツールを起動するときは@<code>{ApplicationのRun()}関数を実行します。
+
+@<code>{Pages}は各画面を制御します。
+今回は画面が2つあって、各画面へのフォーカスなどを@<code>{Pages}が行います。
+
+更に、@<code>{GUI}に@<list>{gui_methods}の関数を追加します。
+
+//listnum[gui_methods][追加する関数][go]{
+func (g *GUI) Run() error {
+	cur, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	files, err := Files(cur)
+	if err != nil {
+		return err
+	}
+
+	g.FilePanel.SetFiles(files)
+	g.FilePanel.UpdateView()
+
+	g.SetKeybinding()
+
+	grid := tview.NewGrid().SetColumns(0, 0).
+		AddItem(g.FilePanel, 0, 0, 1, 1, 0, 0, true)
+
+	g.Pages.AddAndSwitchToPage("main", grid, true)
+
+	return g.App.SetRoot(g.Pages, true).Run()
+}
+
+func (g *GUI) SetKeybinding() {
+	g.FilePanel.Keybinding(g)
+}
+//}
+
+@<code>{SetKeybinding()}は@<code>{GUI}が管理している画面のキーバインドを起動時にまとめて設定する役割です。
+画面を増やしていくたびに、ここにキーバインドの設定関数を追加していきます。
+
+@<code>{Run()}はいちばん重要な関数で、TUIを実行する役割です。処理の概要を解説をします。
+
+  1. @<code>{os.Getwd()}で現在のディレクトリを取得して@<code>{Files}に渡す
+  2. @<code>{Files()}で取得したファイル一覧を@<code>{FilePanel}にセット
+  3. @<code>{FilePanel.UpdateView()}でテーブルを描画
+  4. @<code>{SetKeybinding()}で各画面のキーバインド設定
+  5. @<code>{tview.NewGrid()}でグリッドを作成
+  4. @<code>{SetColumns()}でグリッドのセルを縦2つ作る
+  5. @<code>{AddItem()}で@<code>{FilePanel}をグリッドに追加して配置
+  6. @<code>{Pages.AddAndSwitchToPage()}でグリッドを@<code>{Pages}の管理下におき、フォーカスする
+  7. @<code>{App.SetRoot()}でPagesを@<code>{Application}の管理下におき、@<code>{Run()}でtviewを実行
 
 ==== 3. ファイルのプレビュー画面を作成し中身を表示する
 
