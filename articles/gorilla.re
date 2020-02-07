@@ -44,7 +44,7 @@ $ docker stop {container name or id}
 TUIについて説明したところで、どんなTUIツールがあるのかを紹介します。
 
 === docui
-TUIとはの節で軽く紹介しましたが、改めて紹介します。
+TUIとはの節で軽く紹介しましたが、あらためて紹介します。
 docui@<fn>{about_docui}はdockerの操作をシンプルに、そして初心者でも使いやすいTUIツールです。
 
 主な機能は次です。
@@ -56,7 +56,7 @@ docui@<fn>{about_docui}はdockerの操作をシンプルに、そして初心者
 docuiでは各リソース（イメージやコンテナ）をパネルごとに表示しています。
 各パネルでのキーを使って操作します。
 
-たとえばイメージのパネルで@<code>{c}でコンテナの@<img>{gorilla/docui-create-container}のように作成画面が表示され、必要な項目を入力してコンテナを作成できます。
+たとえばイメージのパネルでは、@<code>{c}でコンテナの@<img>{gorilla/docui-create-container}のように作成画面が表示され、必要な項目を入力してコンテナを作成できます。
 また、@<code>{f}で入力画面が表示され、キーワードを入力してEnterを押すと@<img>{gorilla/docui-search}のようにイメージの検索結果一覧を見れます。
 
 //image[gorilla/docui-create-container][コンテナ作成][scale=0.9]
@@ -93,7 +93,7 @@ tsonの主な機能は次になります。
 //footnote[about_jq][https://stedolan.github.io/jq/]
 //footnote[about_tson][https://github.com/skanehira/tson]
 
-=== ファイラー
+=== ファイラ
 端末で作業しているとディレクトリの移動やファイルのコピーや削除、中身を確認したりすることが多々あります。
 これらもすべてコマンドで操作する必要があり、ちょっと面倒です。
 
@@ -109,10 +109,10 @@ ffは手軽にディレクトリの移動やファイル、ディレクトリの
 TUIツールをいくつか紹介したところで、実際に簡単なTUIツールを作ってみましょう。
 今回のTUIツールはファイルのビューアです。ビューアの仕様の次になります。
 
- * カレントディレクトリのファイル一覧
+ * カレントディレクトリのファイル一覧画面
  * 選択したファイルの中身をプレビュー画面に表示
 
-とてもシンプルなTUIなので、みなさんもぜひ一緒に手を動かしながら読み進めましょう。
+とてもシンプルなTUIですので、みなさんもぜひ一緒に手を動かしながら読み進めましょう。
 
 === ライブラリ
 今回使用するライブラリはtview@<fn>{about_tview}というTUIライブラリです。筆者は普段このライブラリを使用してTUIツールを作っています。
@@ -123,12 +123,12 @@ TUIツールをいくつか紹介したところで、実際に簡単なTUIツ�
 === 実装
 実装は大まかに3ステップになります。
 
-1. ファイル一覧を取得
-2. ファイル一覧を表示する画面を作成
-3. ファイルのプレビュー画面を作成し中身を表示する
+ 1. ファイル一覧を取得
+ 2. ファイル一覧を表示する画面を作成
+ 3. ファイルのプレビュー画面を作成し中身を表示する
 
 読者が理解しやすいように、すべてmainパッケージに実装します。なお、ファイル分けはします。
-では、Let's Go！
+では、やっていきましょう。
 
 ==== 1. ファイル一覧を取得
 まず、file.goファイルを作成して、@<code>{ioutil}パッケージの@<code>{ReadDir()}関数を使用して、
@@ -245,4 +245,106 @@ $ go test -v
 PASS
 ok      github.com/skanehira/shoten8-sample-tui 0.007s
 //}
+
+==== 2. ファイル一覧を表示する画面を作成
+ファイル一覧を取得する関数ができたので、次にいよいよtviewを使って画面を作っていきます。
+ファイルを選択して何かを操作するインタフェースはtview.Table@<fn>{about_tview_table}を使います。
+
+//footnote[about_tview_table][https://github.com/rivo/tview/wiki/Table]
+
+まず、file_panel.goファイルを作成して、@<code>{file_panel_struct}の構造体を用意します。
+
+//listnum[file_panel_struct][FilePanel][go]{
+package main
+
+import (
+	"os"
+
+	"github.com/rivo/tview"
+)
+
+type FilePanel struct {
+	files []os.FileInfo
+	*tview.Table
+}
+
+//}
+
+選択したファイルをプレビューできるようにするため、
+@<code>{Files()}で取得したファイルをfilesフィールドに持たせます。
+
+次に、@<list>{new_file_panel}のNew関数を用意します。
+
+//listnum[new_file_panel][FilePanelのNew関数][go]{
+func NewFilePanel() *FilePanel {
+	p := &FilePanel{
+		Table: tview.NewTable(),
+	}
+
+	p.SetBorder(true).
+		SetTitle("files").
+		SetTitleAlign(tview.AlignLeft)
+
+	p.SetSelectable(true, false)
+
+	return p
+}
+//}
+
+@<code>{tview.Table}のメソッドについて解説します。
+
+ * @<code>{SetBorder()}は画面に枠を描画するかどうかの設定、trueの場合は枠が描画される
+ * @<code>{SetTitle()}は枠上のタイトルをセットする設定
+ * @<code>{SetTitleAlign()}はタイトルの位置を設定
+ * @<code>{SetSelectable()}は行と列を選択できるかどうかにする設定、1つ目の引数は行、次は列
+
+関数の詳細はGoDocを参照していただくとして、基本的にこういった流れで画面を定義していく流れです。
+次に、いくつか関数を追加していきます。追加する関数は@<list>{file_panel_methods}です。
+
+//listnum[file_panel_methods][FilePanelの関数][go]{
+func (f *FilePanel) SetFiles(files []os.FileInfo) {
+	f.files = files
+}
+
+func (f *FilePanel) Keybinding(g *GUI) {
+	f.SetSelectionChangedFunc(func(row, col int) {
+		if row > len(f.files)-1 || row < 0 {
+			return
+		}
+		// TODO preview file
+	})
+}
+
+func (f *FilePanel) UpdateView() {
+	table := f.Clear()
+
+	for i, fi := range f.files {
+		table.SetCell(i, 0, tview.NewTableCell(fi.Name()))
+	}
+}
+//}
+
+関数について説明していきます。
+
+@<code>{SetFiles()}は@<code>{Files}で取得したファイル情報を@<code>{FilePanel.files}にセットします。
+@<code>{NewFilePanel()}でfilesにセットしてもよいですが、役割が異なるので別関数として切り出します。
+
+@<code>{Keybinding()}は@<code>{FilePanel}のキーバインドを設定します。
+@<code>{tview.Table}の@<code>{SetSelectionChangedFunc()}を使用することで、現在選択している項目のindexを取得できます。
+そして、そのindexを使ってfilesからファイル情報を取得します。なお、プレビュー画面はまだ作成していないのでいったんToDoとします。
+
+@<code>{UpdateView()}は画面描画をします。@<code>{tview.Table}では、セルという単位で描画していきますので、
+@<code>{tview.Table}の@<code>{SetCell()}関数を使用します。
+
+@<code>{SetCell()}の第1引数は行、第2引数は列、第3引数セル構造体を渡します。
+たとえば、2列2行のテーブルを描画したい場合は@<list>{tview_table_setcell}のようになります。
+
+//listnum[tview_table_setcell][2列2行描画][go]{
+table.SetCell(0, 0, tview.NewTableCell("1行1列目"))
+table.SetCell(0, 1, tview.NewTableCell("1行2列目"))
+table.SetCell(1, 0, tview.NewTableCell("2行1列目"))
+table.SetCell(1, 1, tview.NewTableCell("2行2列目"))
+//}
+
+==== 3. ファイルのプレビュー画面を作成し中身を表示する
 
