@@ -252,7 +252,7 @@ ok      github.com/skanehira/shoten8-sample-tui 0.007s
 
 //footnote[about_tview_table][https://github.com/rivo/tview/wiki/Table]
 
-まず、file_panel.goファイルを作成して、@<code>{file_panel_struct}の構造体を用意します。
+まず、file_panel.goファイルを作成して、@<list>{file_panel_struct}の構造体を用意します。
 
 //listnum[file_panel_struct][FilePanel][go]{
 package main
@@ -296,9 +296,9 @@ func NewFilePanel() *FilePanel {
  * @<code>{SetBorder()}は画面に枠を描画するかどうかの設定、trueの場合は枠が描画される
  * @<code>{SetTitle()}は枠上のタイトルをセットする設定
  * @<code>{SetTitleAlign()}はタイトルの位置を設定
- * @<code>{SetSelectable()}は行と列を選択できるかどうかにする設定、1つ目の引数は行、次は列
+ * @<code>{SetSelectable()}は行と列を選択できるかどうかを設定、1つ目の引数は行、2つ目は列
 
-関数の詳細はGoDocを参照していただくとして、基本的にこういった流れで画面を定義していく流れです。
+関数の詳細はGoDocを参照していただくとして、基本的にこういった流れで画面を定義していきます。
 次に、いくつか関数を追加していきます。追加する関数は@<list>{file_panel_methods}です。
 
 //listnum[file_panel_methods][FilePanelの関数][go]{
@@ -306,11 +306,16 @@ func (f *FilePanel) SetFiles(files []os.FileInfo) {
 	f.files = files
 }
 
+func (f *FilePanel) SelectedFile() os.FileInfo {
+	row, _ := f.GetSelection()
+	if row > len(f.files)-1 || row < 0 {
+		return nil
+	}
+	return f.files[row]
+}
+
 func (f *FilePanel) Keybinding(g *GUI) {
 	f.SetSelectionChangedFunc(func(row, col int) {
-		if row > len(f.files)-1 || row < 0 {
-			return
-		}
 		// TODO preview file
 	})
 }
@@ -328,6 +333,7 @@ func (f *FilePanel) UpdateView() {
 各関数について説明していきます。
 
 @<code>{SetFiles()}は@<code>{Files}で取得したファイル情報を@<code>{FilePanel.files}にセットします。
+@<code>{SelectedFile()}は現在選択しているファイル情報を取得します。@<code>{f.GetSelection()}は現在テーブルの行と列を取得できるのでそれを利用しています。
 @<code>{NewFilePanel()}でfilesにセットしてもよいですが、役割が異なるので別関数として切り出します。
 
 @<code>{Keybinding()}は@<code>{FilePanel}のキーバインドを設定します。
@@ -348,7 +354,7 @@ table.SetCell(1, 1, tview.NewTableCell("2行2列目"))
 //}
 
 ファイル一覧を表示して、選択する画面の実装は以上です。
-次に@<code>{gui.go}ファイルを作成して、@<code>{about_gui}のファイル一覧画面とプレビュー画面を管理する役割を持つ構造体GUIとそれを生成するNew関数を用意します。
+次に@<code>{gui.go}ファイルを作成して、@<list>{about_gui}のファイル一覧画面とプレビュー画面を管理する役割を持つ構造体GUIとそれを生成するNew関数を用意します。
 
 //listnum[about_gui][画面を管理するためのGUI構造体][go]{
 package main
@@ -380,7 +386,7 @@ func NewGUI() *GUI {
 @<code>{Pages}は各画面を制御します。
 今回は画面が2つあって、各画面へのフォーカスなどを@<code>{Pages}が行います。
 
-更に、@<code>{GUI}に@<list>{gui_methods}の関数を追加します。
+さらに、@<code>{GUI}に@<list>{gui_methods}の関数を追加します。
 
 //listnum[gui_methods][追加する関数][go]{
 func (g *GUI) Run() error {
@@ -414,7 +420,7 @@ func (g *GUI) SetKeybinding() {
 @<code>{SetKeybinding()}は@<code>{GUI}が管理している画面のキーバインドを起動時にまとめて設定する役割です。
 画面を増やしていくたびに、ここにキーバインドの設定関数を追加していきます。
 
-@<code>{Run()}はいちばん重要な関数で、TUIを実行する役割です。処理の概要を解説をします。
+@<code>{Run()}は一番重要な関数で、TUIを実行する役割です。処理の概要を解説をします。
 
   1. @<code>{os.Getwd()}で現在のディレクトリを取得して@<code>{Files}に渡す
   2. @<code>{Files()}で取得したファイル一覧を@<code>{FilePanel}にセット
@@ -426,5 +432,145 @@ func (g *GUI) SetKeybinding() {
   6. @<code>{Pages.AddAndSwitchToPage()}でグリッドを@<code>{Pages}の管理下におき、フォーカスする
   7. @<code>{App.SetRoot()}でPagesを@<code>{Application}の管理下におき、@<code>{Run()}でtviewを実行
 
+この処理の中で大事になってくるのはグリッドです。グリッドは画面レイアウトを制御するのに使用します。
+今回は画面の左半分にファイル一覧、右半分にプレビュー画面のレイアウトにするので、縦に2つセルを用意します。
+
+@<code>{SetColumns()}は縦に作成するセルの数とセルのサイズを設定します。渡した引数の分だけ縦にセルを作ります。
+渡した値がセルのサイズです。0の場合は余った領域のサイズになります。
+
+たとえば、@<code>{SetColumns(5, 0)}の場合は、次図のように縦1つ目のセルのサイズは5で、右半分のサイズは残りの領域をすべて使います。
+今回は0を2つ渡したので、均等サイズのセルが2つ作られます。
+
+//cmd{
++-----+----------+
+|     |          |
+|     |          |
+|     |          |
+|     |          |
+|     |          |
++-----+----------+
+//}
+
+@<code>{AddItem()}はまず@<code>{FilePanel}をグリッドに追加します。
+そして、第2引数は行、第3引数は列で、どのセルに置くかを設定します。@<code>{FilePanel}は1行1列目のセルに配置するので第2、3引数はともに0です。
+たとえば1行2列目のセルに@<code>{FilePanel}を配置したい場合は第2は0、第3引数は1となります。
+
+次に第3引数は行の、第4引数は列のセルの大きさを設定します。@<code>{FilePanel}は1セルのみを使うので、行と列を1に設定します。
+たとえば、@<code>{FilePanel}を1行2列で配置したい場合は第3引数は1、第4引数は2を設定します。
+
+グリッドに関する説明は文面だけでは理解しづらいので、
+ソースコードを書き換えて動作を確認して見てください。そちらの方が理解しやすいです。
+
+ここまで実装すると動かすことができます。@<img>{gorilla/tui_files_sample}は動かしたときの様子です。
+
+//image[gorilla/tui_files_sample][ファイル一覧の画面][scale=0.9]
+
 ==== 3. ファイルのプレビュー画面を作成し中身を表示する
+ファイル一覧の画面を出したところで、次はプレビュー画面を作っていきます。
+まず@<code>{preview.go}を作成して、@<list>{about_preview}の構造体と関数を用意します。
+
+//listnum[about_preview][Preview構造体と関数][go]{
+package main
+
+import (
+	"io/ioutil"
+
+	"github.com/rivo/tview"
+)
+
+type PreviewPanel struct {
+	*tview.TextView
+}
+
+func NewPreviewPanel() *PreviewPanel {
+	p := &PreviewPanel{
+		TextView: tview.NewTextView(),
+	}
+
+	p.SetBorder(true).
+		SetTitle("preview").
+		SetTitleAlign(tview.AlignLeft)
+
+	return p
+}
+
+func (p *PreviewPanel) UpdateView(name string) {
+	var content string
+	b, err := ioutil.ReadFile(name)
+	if err != nil {
+		content = err.Error()
+	} else {
+		content = string(b)
+	}
+
+	p.Clear().SetText(content)
+}
+//}
+
+テキストを画面に出力するには@<code>{tview.TextView}を使います。
+@<code>{NewPreviewPanel()}は@<code>{NewFilePanel()}とやっていることはほぼ同じで、タイトルとその位置を設定しています。
+
+@<code>{UpdateView()}は実際ファイルの中身を読み込んで画面に出力します。
+
+プレビュー画面を描画する処理は以上です。次に@<code>{gui.go}に@<list>{add_preview_panel}の追加処理を実装していきます。
++の部分が追記箇所です。
+
+//listnum[add_preview_panel][PreviewPanelの追加と初期化][go]{
+ type GUI struct {
+ 	App          *tview.Application
+ 	Pages        *tview.Pages
+ 	FilePanel    *FilePanel
++	PreviewPanel *PreviewPanel
+ }
+  
+ func NewGUI() *GUI {
+ 	return &GUI{
+ 		App:          tview.NewApplication(),
+ 		Pages:        tview.NewPages(),
+ 		FilePanel:    NewFilePanel(),
++		PreviewPanel: NewPreviewPanel(),
+ 	}
+ }
+
+ func (g *GUI) Run() error {
+ 	cur, err := os.Getwd()
+ 	if err != nil {
+ 		return err
+ 	}
+ 	files, err := Files(cur)
+ 	if err != nil {
+ 		return err
+ 	}
+ 
+ 	g.FilePanel.SetFiles(files)
+ 	g.FilePanel.UpdateView()
+ 
+ 	file := g.FilePanel.SelectedFile()
+ 	if file != nil {
++		g.PreviewPanel.UpdateView(file.Name())
+ 	}
+ 
+ 	g.SetKeybinding()
+ 
+ 	grid := tview.NewGrid().SetColumns(0, 0).
+ 		AddItem(g.FilePanel, 0, 0, 1, 1, 0, 0, true).
++		AddItem(g.PreviewPanel, 0, 1, 1, 1, 0, 0, true)
+ 
+ 	g.Pages.AddAndSwitchToPage("main", grid, true)
+ 
+ 	return g.App.SetRoot(g.Pages, true).Run()
+ }
+//}
+
+次に@<list>{add_files_preview}のファイル一覧画面で選択したファイルをプレビューする処理を追記します。
+
+//listnum[add_files_preview][プレビュー処理を追加][go]{
+ func (f *FilePanel) Keybinding(g *GUI) {
+ 	f.SetSelectionChangedFunc(func(row, col int) {
+ 		if file := f.SelectedFile(); file != nil {
++			g.PreviewPanel.UpdateView(file.Name())
+ 		}
+ 	})
+ }
+//}
 
