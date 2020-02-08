@@ -7,11 +7,11 @@
 
 == TUIとは
 TUIは簡潔に説明しますと端末上で動作するGUIのようなインタフェースのことです。
-GUIと同様、マウスとキーボードを使用できます。
+GUI（Graphical User Interface）と同様、マウスとキーボードを使用できます。
 
 TUIツールとはそのようなインタフェースを持つツールのことを指します。
 よくCLI（Command Line Interface）と混合されますが、CLIは名前のとおりコマンドを使って操作するインタフェースです。
-たとえば@<code>{ls}などはCLIの一種です。
+たとえば@<code>{ls}などもCLIの一種です。
 
 TUIがCLIと混同されがちな理由は、おそらくどちらもコマンドを使って実行するからなのではないかと考えられます。
 
@@ -33,14 +33,14 @@ $ docker stop {container name or id}
 このように、CLIでは都度コマンドを入力して実行という手順を踏む必要があって面倒です。
 そのような面倒を解消するために筆者はTUIツールをよく作っています。
 
-しかし、TUIにもデメリットがあります。TUIはキーボードやマウス、画面などを使用するため自動化に向いていません。
-対してCLIは自動化にとても向いています。
+しかし、TUIにもデメリットがあります。TUIはキーボードまたはマウスの入力待ちが発生するため自動化はかなり困難です。
+対してCLIは一般的に標準入出力を使うだけなので、自動化に向いています。
 
 このように、TUIとCLIはそれぞれ活かせる場面がありますので、その使い分けもまた大事と筆者は考えています。
 
 //image[gorilla/about_tui_tool][筆者が作ったdockerのTUIツール][scale=0.9]
 
-== TUIツール
+== TUIツールの紹介
 TUIについて説明したところで、どんなTUIツールがあるのかを紹介します。
 
 === docui
@@ -65,7 +65,7 @@ docuiでは各リソース（イメージやコンテナ）をパネルごとに
 //footnote[about_docui][https://github.com/skanehira/docui]
 
 === lazygit
-lazygit@<fn>{about_lazygit}はGitのTUIツールです。GitコマンドをTUIツールでラップしてより使いやすくなっています。
+lazygit@<fn>{about_lazygit}はGitのTUIツールです。Gitコマンドをラップしてより使いやすくなっています。
 
 lazygitはファイルの差分確認やステージ追加、コミットの差分確認などを行うときに便利です。
 @<img>{gorilla/lazygit-diff}はコミットの差分を表示する画面です。
@@ -333,12 +333,12 @@ func (f *FilePanel) UpdateView() {
 各関数について説明していきます。
 
 @<code>{SetFiles()}は@<code>{Files}で取得したファイル情報を@<code>{FilePanel.files}にセットします。
-@<code>{SelectedFile()}は現在選択しているファイル情報を取得します。@<code>{f.GetSelection()}は現在テーブルの行と列を取得できるのでそれを利用しています。
 @<code>{NewFilePanel()}でfilesにセットしてもよいですが、役割が異なるので別関数として切り出します。
+@<code>{SelectedFile()}は現在選択しているファイル情報を取得します。@<code>{f.GetSelection()}は現在テーブルの行と列を取得できるのでそれを利用しています。
 
 @<code>{Keybinding()}は@<code>{FilePanel}のキーバインドを設定します。
-@<code>{tview.Table}の@<code>{SetSelectionChangedFunc()}を使用することで、現在選択している項目のindexを取得できます。
-そして、そのindexを使ってfilesからファイル情報を取得します。なお、プレビュー画面はまだ作成していないのでいったんToDoとします。
+@<code>{tview.Table}の@<code>{SetSelectionChangedFunc()}は選択する項目が変わるたびに呼び出されます。関数に行と列のindexを取得できます。
+indexを使ってfilesからファイル情報を取得します。なお、プレビュー画面はまだ作成していないのでいったんToDoとします。
 
 @<code>{UpdateView()}は画面描画をします。@<code>{tview.Table}では、セルという単位で描画していきますので、
 @<code>{tview.Table}の@<code>{SetCell()}関数を使用します。
@@ -545,10 +545,10 @@ func (p *PreviewPanel) UpdateView(name string) {
  	g.FilePanel.SetFiles(files)
  	g.FilePanel.UpdateView()
 
- 	file := g.FilePanel.SelectedFile()
- 	if file != nil {
++	file := g.FilePanel.SelectedFile()
++	if file != nil {
 +		g.PreviewPanel.UpdateView(file.Name())
- 	}
++	}
 
  	g.SetKeybinding()
 
@@ -579,9 +579,13 @@ func (p *PreviewPanel) UpdateView(name string) {
 
 //image[gorilla/preview_tui_sample][プレビューの様子][scale=0.9]
 
-=== さいごに
+=== 最後に
 簡易のプレビューTUIツールを作りましたが、まだ改善余地はあります。たとえばプレビュー画面をスクロールできるようにするなどです。
 そこは読者のみなさんへの課題とします。ぜひ取り組んでみてください。
 
+本章で実装したサンプルコードは筆者のリポジトリ@<fn>{sample_ui_repository}に置いてありますので、全体像を掴んでおきたい方はそちらを参考してください。
+
 本章を読んで、TUIツールを作ってみようかなって気持ちになったら筆者的の目的は達成です。
 こういった小さなツールは作業効率を上げる道具になりますので、ぜひチャレンジしてみてください。
+
+//footnote[sample_ui_repository][https://github.com/skanehira/shoten8-sample-tui]
