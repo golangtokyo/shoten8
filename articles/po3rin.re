@@ -270,7 +270,7 @@ func (s *Server) Run(ctx context.Context) error {
 }
 //}
 
-@<list>{server.run}ではAPIの起動に必要な@<code>{Server}の初期化を@<code>{New}関数で行い、@<code>{Server.Run}メソッドで実際の立ち上げを行います。@<code>{Server.Run}では引数にcontext.Contextを受けて、コンテキストがキャンセルされたら@<code>{ListenAndServe}を止められるようにしています。ここでは準標準パッケージの@<code>{golang.org/x/sync/errgroup}を使っています。これにより1つのサブタスクでエラーが発生した場合に、@<code>{errgroup.WithContext}関数で生成したコンテキストをキャンセルすることができます。そしてgorutineで出したエラーを@<code>{*Server.Run}の返り値として呼び出し元に返すことができます。@<code>{errgroup}の使い方やExampleはドキュメント@<fn>{errgroup}をご覧ください。
+@<list>{server.run}ではAPIの起動に必要な@<code>{Server}の初期化を@<code>{New}関数で行い、@<code>{Server.Run}メソッドで実際の立ち上げを行います。@<code>{Server.Run}では引数にcontext.Contextを受けて、コンテキストがキャンセルされたら@<code>{ListenAndServe}をとめられるようにしています。ここでは準標準パッケージの@<code>{golang.org/x/sync/errgroup}を使っています。これにより1つのサブタスクでエラーが発生した場合に、@<code>{errgroup.WithContext}関数で生成したコンテキストをキャンセルできます。そしてgorutineで出したエラーを@<code>{*Server.Run}の戻り値として呼び出し元に返すことができます。@<code>{errgroup}の使い方やExampleはドキュメント@<fn>{errgroup}をご覧ください。
 
 //footnote[errgroup][@<href>{https://pkg.go.dev/golang.org/x/sync/errgroup?tab=doc}]
 
