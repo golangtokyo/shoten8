@@ -5,7 +5,7 @@
 
 //footnote[about_gorilla][https://twitter.com/gorilla0513]
 
-== TUIとは
+=={about_tui}TUIとは
 TUIは簡潔に説明しますと端末上で動作するGUIのようなインタフェースのことです。
 GUI（Graphical User Interface）と同様、マウスとキーボードを使用できます。
 
@@ -44,7 +44,7 @@ $ docker stop {container name or id}
 TUIについて説明したところで、どんなTUIツールがあるのかを紹介します。
 
 === docui
-TUIとはの節で軽く紹介しましたが、あらためて紹介します。
+@<hd>{about_tui}の節で軽く紹介しましたが、あらためて紹介します。
 docui@<fn>{about_docui}はdockerの操作をシンプルに、そして初心者でも使いやすいTUIツールです。
 
 主な機能は次です。
@@ -57,7 +57,7 @@ docuiでは各リソース（イメージやコンテナ）をパネルごとに
 各パネルでのキーを使って操作します。
 
 たとえばイメージのパネルでは、@<code>{c}でコンテナの@<img>{gorilla/docui-create-container}のように作成画面が表示され、必要な項目を入力してコンテナを作成できます。
-また、@<code>{f}で入力画面が表示され、キーワードを入力してEnterを押すと@<img>{gorilla/docui-search}のようにイメージの検索結果一覧を見れます。
+また、@<code>{f}で入力画面が表示され、キーワードを入力してEnterを押すと@<img>{gorilla/docui-search}のようにイメージの検索結果一覧が表示されます。
 
 //image[gorilla/docui-create-container][コンテナ作成][scale=0.9]
 //image[gorilla/docui-search][イメージの検索][scale=0.9]
@@ -116,7 +116,7 @@ TUIツールをいくつか紹介したところで、実際に簡単なTUIツ�
 
 === ライブラリ
 今回使用するライブラリはtview@<fn>{about_tview}というTUIライブラリです。筆者は普段このライブラリを使用してTUIツールを作っています。
-1点注意ですが、このライブラリはWindowsでは正しく描画されないです。Windowsの方はWSLなどを使って実装してください。
+1点注意ですが、このライブラリはWindowsのコマンドプロンプトでは正しく描画されないです。Windowsの方はWSLなどを使って実装してください。
 
 //footnote[about_tview][https://github.com/rivo/tview]
 
@@ -130,7 +130,7 @@ TUIツールをいくつか紹介したところで、実際に簡単なTUIツ�
 読者が理解しやすいように、すべてmainパッケージに実装します。なお、ファイル分けはします。
 では、やっていきましょう。
 
-==== 1. ファイル一覧を取得
+==== ファイル一覧を取得
 まず、file.goファイルを作成して、@<code>{ioutil}パッケージの@<code>{ReadDir()}関数を使用して、
 @<list>{get_files}のカレントディレクトリ配下のファイル情報のみを取得する関数を作成します。
 
@@ -232,16 +232,14 @@ func TestFilesFail(t *testing.T) {
 //cmd{
 $ go test -v
 === RUN   TestFiles
-=== RUN   TestFiles/success
-=== RUN   TestFiles/failed
 --- PASS: TestFiles (0.00s)
-    --- PASS: TestFiles/success (0.00s)
-    --- PASS: TestFiles/failed (0.00s)
+=== RUN   TestFilesFail
+--- PASS: TestFilesFail (0.00s)
 PASS
 ok      github.com/skanehira/shoten8-sample-tui 0.007s
 //}
 
-==== 2. ファイル一覧を表示する画面を作成
+==== ファイル一覧を表示する画面を作成
 ファイル一覧を取得する関数ができたので、次にいよいよtviewを使って画面を作っていきます。
 ファイルを選択して何かを操作するインタフェースはtview.Table@<fn>{about_tview_table}を使います。
 
@@ -460,7 +458,7 @@ func (g *GUI) SetKeybinding() {
 
 //image[gorilla/tui_files_sample][ファイル一覧の画面][scale=0.9]
 
-==== 3. ファイルのプレビュー画面を作成し中身を表示する
+==== ファイルのプレビュー画面を作成し中身を表示する
 ファイル一覧の画面を出したところで、次はプレビュー画面を作っていきます。
 まず@<code>{preview.go}を作成して、@<list>{about_preview}の構造体と関数を用意します。
 
@@ -578,9 +576,8 @@ func (p *PreviewPanel) UpdateView(name string) {
 簡易のプレビューTUIツールを作りましたが、まだ改善余地はあります。たとえばプレビュー画面をスクロールできるようにするなどです。
 そこは読者のみなさんへの課題とします。ぜひ取り組んでみてください。
 
-本章で実装したサンプルコードは筆者のリポジトリ@<fn>{sample_ui_repository}に置いてありますので、全体像をつかんで置きたい方はそちらを参考してください。
+本章で実装したサンプルコードは筆者のリポジトリ@<fn>{sample_tui_repository}に置いてありますので、全体像をつかんで置きたい方はそちらを参考してください。
 
-本章を読んで、TUIツールを作ってみようかなって気持ちになったら筆者的の目的は達成です。
 こういった小さなツールは作業効率を上げる道具になりますので、ぜひチャレンジしてみてください。
 
-//footnote[sample_ui_repository][https://github.com/skanehira/shoten8-sample-tui]
+//footnote[sample_tui_repository][https://github.com/skanehira/shoten8-sample-tui]
