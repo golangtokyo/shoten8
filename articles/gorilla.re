@@ -56,7 +56,7 @@ docui@<fn>{about_docui}はdockerの操作をシンプルに、そして初心者
 docuiでは各リソース（イメージやコンテナ）をパネルごとに表示しています。
 各パネルでのキーを使って操作します。
 
-たとえばイメージのパネルでは、@<code>{c}でコンテナの@<img>{gorilla/docui-create-container}のように作成画面が表示され、必要な項目を入力してコンテナを作成できます。
+たとえばイメージのパネルでは、@<code>{c}で@<img>{gorilla/docui-create-container}のようにコンテナの作成画面が表示され、必要な項目を入力してコンテナを作成できます。
 また、@<code>{f}で入力画面が表示され、キーワードを入力してEnterを押すと@<img>{gorilla/docui-search}のようにイメージの検索結果一覧が表示されます。
 
 //image[gorilla/docui-create-container][コンテナ作成][scale=0.9]
