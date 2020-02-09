@@ -101,7 +101,7 @@ Raftでは@<b>{ターム}という時間の分割単位があり、選挙開始�
 
 == Goでシンプルなキーバリューストアを実装する
 
-この節では分散キーバリューストアを実装する前段階&Goの復習も兼ねてシンプルなキーバリューストアを作ってみましょう。シンプルなキーバリューストアの完成形は@<code>{https://github.com/po3rin/kvraft/commit/dfbf0a}にあります。HTTPリクエストを受けてデータを操作します。図にすると@<img>{kv}のようになります。
+この節では分散キーバリューストアを実装する前段階&Goの復習も兼ねてシンプルなキーバリューストアを作ってみましょう。シンプルなキーバリューストアの完成形は@<code>{https://github.com/po3rin/kvraft/commit/****}にあります。HTTPリクエストを受けてデータを操作します。図にすると@<img>{kv}のようになります。
 
 //image[kv][シンプルなキーバリューストア][scale=0.9]{
 //}
@@ -331,7 +331,7 @@ Raftアルゴリズムをゼロから実装するのはかなり骨の折れる�
 === 実装方針
 
 一気に完璧なRaftを構築する前に必要な機能をstep-by-stepで実装しつつ動作確認できたら次の機能を実装という形で進めていきます。
-先ほどお話したとおり、今回使うetcd/raftパッケージはRaftアルゴリズムのコアのみにフォーカスして実装されています。ログのコンセンサスをRaftにお願いする手前までや、エントリの保存、コミット済みのエントリの扱いなどはこちらで実装する必要があります。その為、まずはRaftアルゴリズムを利用する責務をもつraftalgパッケージを作ります。ここでは外部から依頼を受けてRaftアルゴリズムに処理を渡す部分と、Raftアルゴリズムからの結果を処理する仕事があります。少しコードが複雑になるので図にしてみました(@<img>{arch})。
+先ほどお話したとおり、今回使う@<b>{etcd/raft}パッケージはRaftアルゴリズムのコアのみにフォーカスして実装されています。ログのコンセンサスをRaftにお願いする手前までや、エントリの保存、コミット済みのエントリの扱いなどはこちらで実装する必要があります。その為、まずはRaftアルゴリズムを利用する責務をもつ@<b>{raftalg}パッケージを作ります。ここでは外部から依頼を受けてRaftアルゴリズムに処理を渡す部分と、Raftアルゴリズムからの結果を処理する仕事があります。少しコードが複雑になるので図にしてみました(@<img>{arch})。
 
 //image[arch][大雑把にraftalgパッケージが行うことの構成図][scale=1]{
 //}
@@ -455,7 +455,7 @@ func (r *RaftAlg) Run(ctx context.Context) error {
 
 === Raftノードの起動とWALのリプレイ
 
-さっそくノードを起動します。Raftノードの起動には2パターンがあり、新規起動と再起動の２つがあります。どちらを使うかはWALの保存用ディレクトリが存在するかどうかで決定しましょう。WAL（Write-Ahead Log）は文字どおり、writeする前にlogを保存しておくことです。Raftの文脈においてはログと同じ意味です。State machine への入力をエントリとしてログに保存すると説明したのを思い出してください。WALのI/Oに関しては便利な@<code>{etcd/wal}パッケージが提供されています。WAL保存用のディレクトリの存在チェックとログのリプレイを行った後にノードを起動するようにします(@<list>{wal})。
+さっそくノードを起動します。Raftノードの起動には2パターンがあり、新規起動と再起動の２つがあります。どちらを使うかはWALの保存用ディレクトリが存在するかどうかで決定しましょう。@<b>{WAL}（Write-Ahead Log）は文字どおり、writeする前にlogを保存しておくことです。Raftの文脈においてはログと同じ意味です。State machine への入力をエントリとしてログに保存すると説明したのを思い出してください。WALのI/Oに関しては便利な@<code>{etcd/wal}パッケージが提供されています。WAL保存用のディレクトリの存在チェックとログのリプレイを行った後にノードを起動するようにします(@<list>{wal})。
 
 //list[wal][WALのreplayとノードの起動][go]{
 func (r *RaftAlg) Run(ctx context.Context) error {
@@ -615,18 +615,28 @@ func (r *RaftAlg) Run(ctx context.Context) error {
 func (r *RaftAlg) serveRaftHTTP(ctx context.Context) error {
 	url, err := url.Parse(r.peers[r.id-1])
 	if err != nil {
-		return err
+		return fmt.Errorf("failed parsing URL: %w", err)
 	}
 	srv := http.Server{Addr: url.Host, Handler: r.transport.Handler()}
-	if err := srv.ListenAndServe(); err != nil {
+
+	eg, ctx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		return srv.ListenAndServe()
+	})
+
+	// コンテキストキャンセルを受けたらシャットダウン
+	<-ctx.Done()
+	sCtx, sCancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer sCancel()
+	if err := srv.Shutdown(sCtx); err != nil {
 		return err
 	}
 
-	return nil
+	return eg.Wait()
 }
 //}
 
-これでノード同士がHTTPで通信できます。また、@<code>{rafthttp.Transport}インターフェースには@<code>{raft.Raft}インターフェースを満たした実装を渡す必要があります。@<code>{raft.Raft}インターフェースがもつ4つのメソッドを@<code>{*RaftAlg}に実装しましょう(@<list>{implRaft})。
+@<list>{serve}では@<list>{server.run}と同じように、コンテキスト経由でサーバーを終了できるようにしています。@<code>{rafthttp.Transport}インターフェースには@<code>{raft.Raft}インターフェースを満たした実装を渡す必要があります。@<code>{raft.Raft}インターフェースがもつ4つのメソッドを@<code>{*RaftAlg}に実装しましょう(@<list>{implRaft})。
 
 //list[implRaft][raft.Raftインターフェースを実装する][go]{
 func (r *RaftAlg) Process(ctx context.Context, m raftpb.Message) error {
@@ -724,7 +734,7 @@ raftalgパッケージの最後にstoreパッケージがRaftを利用できる�
 //list[propose][チャネルを関数でWrap][go]{
 func (r *RaftAlg) Propose(prop []byte) error {
 	ctx, cancel := context.WithTimeout(
-        context.Background(), 5*time.Second,
+        context.Background(), 3*time.Second,
     )
 	defer cancel()
 	return r.node.Propose(ctx, prop)
@@ -764,7 +774,7 @@ type Store struct {
 func New(raft Raft) *Store {
 	return &Store{
 		kvStore: make(map[string]string),
-		Raft:    raft, // 追加
+		Raft:    raft,
 	}
 }
 //}
@@ -849,41 +859,48 @@ func main() {
 }
 //}
 
-そして最後に今まで作った関数をgorutineで走らせます(@<list>{main3})。ここまでの実装で気付きでしょうが、各チャネル処理はcontextでキャンセル可能になっています。特定のシグナルもしくはエラーチャネルを受けたらコンテキストキャンセルを行い、ノードを終了する実装になっています。どのエラーがノードを終了し、どのエラーがノードの起動状態を継続するかを議論することは多くの誌面を使ってしまうので、今回はこのようなシンプルなエラーハンドリングにしています。
+そして最後に今まで作った関数をgorutineで走らせます(@<list>{main3})。
 
 //list[main3][main.goの修正②][go]{
 func main() {
     // 続き...
 
     ctx, cancel := context.WithCancel(context.Background())
-    defer cancel()
+	defer cancel()
 
-    errC := make(chan error)
-    go func() {
-        errC <- ra.Run(ctx)
-    }()
-    go func() {
-        errC <- s.RunCommitReader(ctx)
-    }()
-    go func() {
-        errC <- srv.ListenAndServe()
-    }()
+	eg, ctx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		return ra.Run(ctx)
+	})
+	eg.Go(func() error {
+		return s.RunCommitReader(ctx)
+	})
+	eg.Go(func() error {
+		return srv.Run(ctx)
+	})
 
-    quit := make(chan os.Signal, 1)
-    signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	quit := make(chan os.Signal, 1)
+	defer close(quit)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
-	// エラーかシグナルを受けたら defer cancel()
-    select {
-    case <-quit:
-    case err := <-errC:
-        if err != nil {
-            log.Println(err)
-        }
-    }
+	select {
+	case <-quit:
+		// シグナル受けたらコンテキストキャンセルして
+		// 全てのgorutineを止める
+		log.Println("recieved signal")
+		cancel()
+	case <-ctx.Done():
+	}
+
+	if err := eg.Wait(); err != nil {
+		log.Println(err)
+	}
+
+	log.Println("done")
 }
 //}
 
-おめでとうございます。ひとまずRaftアルゴリズムを用いた分散キーバリューストアが完成しました。
+ここまでの実装で気付きでしょうが、@<list>{main3}においてgorutineで走らせているすべての関数はcontextでキャンセル可能になっています。これにより特定のシグナルもしくはerrgroupがエラーを検知したらコンテキストキャンセルが行われ、すべてのgorutineで起動しているプロセスをきっちり終了できます。どのエラーがノードを終了し、どのエラーがノードの起動状態を継続するかを議論することは多くの誌面を使ってしまうので今回はこのようなシンプルなエラーハンドリングにしています。おめでとうございます。ひとまずRaftアルゴリズムを用いた分散キーバリューストアが完成しました。
 
 === 動作確認で理解するRaft
 
@@ -893,23 +910,24 @@ func main() {
 $ go get github.com/mattn/goreman
 //}
 
-そして@<code>{Procfile}を書きます。
+そして@<code>{Procfile}(@<list>{try3})を書きます。
 
 //list[try3][Procfileの作成][go]{
 # Use goreman to run `go get github.com/mattn/goreman`
-raftexample1: ./raftexample --id 1 --cluster \
+kvraft1: go run main.go --id 1 --cluster \
     http://127.0.0.1:12379,http://127.0.0.1:22379,http://127.0.0.1:32379 \
     --port 12380
 
-raftexample2: ./raftexample --id 2 --cluster \
+kvraft2: go run main.go --id 2 --cluster \
     http://127.0.0.1:12379,http://127.0.0.1:22379,http://127.0.0.1:32379 \
     --port 22380
 
-raftexample3: ./raftexample --id 3 --cluster \
+kvraft3: go run main.go --id 3 --cluster \
     http://127.0.0.1:12379,http://127.0.0.1:22379,http://127.0.0.1:32379 \
     --port 32380
 //}
 
+当然goremanを使わなくても@<list>{try3}のコマンド
 それではクラスターを立ち上げましょう。まずはRaft-debug logを見たいので@<code>{grep Raft-debug}をつけて実行してみましょう(@<list>{goreman})。
 
 //list[goreman][クラスター立ち上げ][go]{
