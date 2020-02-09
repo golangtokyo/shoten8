@@ -34,7 +34,7 @@ $ docker stop {container name or id}
 そのような面倒を解消するために筆者はTUIツールをよく作っています。
 
 しかし、TUIにもデメリットがあります。TUIはキーボードまたはマウスの入力待ちが発生するため自動化はかなり困難です。
-対してCLIは一般的に標準入出力を使うだけなので、自動化に向いています。
+対してCLIは一般的に標準入出力を使うだけですので、自動化に向いています。
 
 このように、TUIとCLIはそれぞれ活かせる場面がありますので、その使い分けもまた大事と筆者は考えています。
 
@@ -65,7 +65,7 @@ docuiでは各リソース（イメージやコンテナ）をパネルごとに
 //footnote[about_docui][https://github.com/skanehira/docui]
 
 === lazygit
-lazygit@<fn>{about_lazygit}はGitのTUIツールです。Gitコマンドをラップしてより使いやすくなっています。
+lazygit@<fn>{about_lazygit}はGitのTUIツールです。Gitコマンドをラップしてより便利になっています。
 
 lazygitはファイルの差分確認やステージ追加、コミットの差分確認などを行うときに便利です。
 @<img>{gorilla/lazygit-diff}はコミットの差分を表示する画面です。
@@ -181,54 +181,49 @@ func mkfile(name string) error {
 }
 
 func TestFiles(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
-		testdir, err := ioutil.TempDir("", "")
-		if err != nil {
-			t.Fatalf("cannot create testdir: %s", err)
-		}
-		defer os.RemoveAll(testdir)
+	testdir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatalf("cannot create testdir: %s", err)
+	}
+	defer os.RemoveAll(testdir)
 
-		exceptedFiles := map[string]string{
-			"a.go": "f",
-			"b.md": "f",
-			"tmp":  "d",
-		}
+	exceptedFiles := map[string]string{
+		"a.go": "f",
+		"tmp":  "d",
+	}
 
-		for f, typ := range exceptedFiles {
-			tmpf := filepath.Join(testdir, f)
-			// if file
-			if typ == "f" {
-				err := mkfile(tmpf)
-				if err != nil {
-					t.Fatalf("create error: %s", err)
-				}
-				// if dir
-			} else if typ == "d" {
-				err := os.Mkdir(tmpf, 0666)
-				if err != nil {
-					t.Fatalf("create error: %s", err)
-				}
+	for f, typ := range exceptedFiles {
+		tmp := filepath.Join(testdir, f)
+		// if file
+		if typ == "f" {
+			err := mkfile(tmp)
+			if err != nil {
+				t.Fatalf("create error: %s", err)
+			}
+			// if dir
+		} else if typ == "d" {
+			err := os.Mkdir(tmp, 0666)
+			if err != nil {
+				t.Fatalf("create error: %s", err)
 			}
 		}
+	}
 
-		files, err := Files(testdir)
-		if err != nil {
-			t.Fatalf("cannot get files: %s", err)
-		}
+	files, err := Files(testdir)
+	if err != nil {
+		t.Fatalf("cannot get files: %s", err)
+	}
 
-		for _, f := range files {
-			if _, ok := exceptedFiles[f.Name()]; !ok {
-				msg := "want: a.go or b.md, got: %s"
-				t.Fatalf(msg, f.Name())
-			}
-		}
-	})
+	fileName := files[0].Name()
+	if fileName != "a.go" {
+		t.Fatalf("want: a.go, got: %s", fileName)
+	}
+}
 
-	t.Run("failed", func(t *testing.T) {
-		if _, err := Files("xxx"); err == nil {
-			t.Fatalf("failed test: err is nil")
-		}
-	})
+func TestFilesFail(t *testing.T) {
+	if _, err := Files("xxx"); err == nil {
+		t.Fatalf("failed test: err is nil")
+	}
 }
 //}
 
@@ -452,7 +447,7 @@ func (g *GUI) SetKeybinding() {
 //}
 
 @<code>{AddItem()}はまず@<code>{FilePanel}をグリッドに追加します。
-そして、第2引数は行、第3引数は列で、どのセルに置くかを設定します。@<code>{FilePanel}は1行1列目のセルに配置するので第2、3引数はともに0です。
+そして第2引数は行、第3引数は列で、どのセルに置くかを設定します。@<code>{FilePanel}は1行1列目のセルに配置するので第2、3引数はともに0です。
 たとえば1行2列目のセルに@<code>{FilePanel}を配置したい場合は第2は0、第3引数は1となります。
 
 次に第3引数は行の、第4引数は列のセルの大きさを設定します。@<code>{FilePanel}は1セルのみを使うので、行と列を1に設定します。
@@ -583,7 +578,7 @@ func (p *PreviewPanel) UpdateView(name string) {
 簡易のプレビューTUIツールを作りましたが、まだ改善余地はあります。たとえばプレビュー画面をスクロールできるようにするなどです。
 そこは読者のみなさんへの課題とします。ぜひ取り組んでみてください。
 
-本章で実装したサンプルコードは筆者のリポジトリ@<fn>{sample_ui_repository}に置いてありますので、全体像を掴んでおきたい方はそちらを参考してください。
+本章で実装したサンプルコードは筆者のリポジトリ@<fn>{sample_ui_repository}に置いてありますので、全体像をつかんで置きたい方はそちらを参考してください。
 
 本章を読んで、TUIツールを作ってみようかなって気持ちになったら筆者的の目的は達成です。
 こういった小さなツールは作業効率を上げる道具になりますので、ぜひチャレンジしてみてください。
