@@ -7,7 +7,7 @@
 
 == なぜコンセンサスアルゴリズムが必要か
 
-@<b>{コンセンサスアルゴリズム}は一貫したグループとして動作し、そのメンバーの一部の障害に耐えることを可能にするアルゴリズムです。安全な分散システムを構築する上で重要な役割を果たします。Raftの前にそもそもなぜコンセンサスアルゴリズムが必要なのかを見ていきましょう。たとえばチームで１つのプロセスだけでデータストアを運用している場合、そのデータストアが障害で落ちたら重大な問題になります。その為、高可用性を担保するために冗長化を行うのが一般的です(@<img>{ha1})。
+@<b>{コンセンサスアルゴリズム}はクラスターのノードの一部の障害に耐えることを可能にするアルゴリズムです。安全な分散システムを構築する上で重要な役割を果たします。Raftの前にそもそもなぜコンセンサスアルゴリズムが必要なのかを見ていきましょう。たとえばチームで１つのプロセスだけでデータストアを運用している場合、そのデータストアが障害で落ちたら重大な問題になります。その為、高可用性を担保するために冗長化を行うのが一般的です(@<img>{ha1})。
 
 //image[ha1][サーバーを2つ用意することで冗長化を行う][scale=0.4]{
 //}
@@ -26,7 +26,7 @@
 
 == Raftとは
 
-コンセンサスアルゴリズムにはいくつか種類があり、その中で@<b>{Paxos}というアルゴリズムが過去10年間メインで使われ続けていました。一方でPaxosのアルゴリズムはかなり複雑で理解が難しいものでした。そこで登場したのが@<b>{Raft}というアルゴリズムです。Raftの論文によれば、RaftはPaxosと同じくらい信頼性と効率性がある一方で、PaxosよりRaftの方がシンプルで理解しやすい構造になっているとのことです。Kubernetesの内部で使われているetcdや全文検索エンジンのAlgoria、分散データベースのCockroachDBなども様々な技術がこのRaftを使っています。
+コンセンサスアルゴリズムにはいくつか種類があり、その中で@<b>{Paxos}というアルゴリズムが過去10年間メインで使われ続けていました。一方でPaxosのアルゴリズムはかなり複雑で理解が難しいものでした。そこで登場したのが@<b>{Raft}@<fn>{raft}というアルゴリズムです。Raftの論文によれば、RaftはPaxosと同じくらい信頼性と効率性がある一方で、PaxosよりRaftの方がシンプルで理解しやすい構造になっているとのことです。Kubernetesの内部で使われているetcdや全文検索エンジンのAlgoria、分散データベースのCockroachDBなども様々な技術がこのRaftを使っています。
 
 === どのようにログ複製を管理するか
 
@@ -129,7 +129,7 @@ $ cd kvraft
 $ go mod init github.com/******/kvraft
 //}
 
-まずはキーバリューストアとなるstoreパッケージを作ります。@<code>{store/store.go}を作ります。(@<list>{store1})。
+まずはキーバリューストアとなる@<b>{store}パッケージを作ります。@<code>{store/store.go}を作ります。(@<list>{store1})。
 
 //list[store1][storeパッケージ][go]{
 package store
@@ -155,13 +155,14 @@ func (s *Store) Lookup(key string) (string, bool) {
 }
 
 func (s *Store) Save(key string, value string) error {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.kvStore[key] = value
-	return nil // ほんとは返り値いらんけど今後のために。。
+	return nil
+}
 //}
 
-@<list>{store1}で実装したStore構造体のmuフィールドは排他制御のためのものです。@<code>{sync.RWMutex}構造体はゼロ値でそのまま使えるので、@<code>{New}関数内で明示的な初期化は必要ありません。続いてキーバリューストアにアクセスするためのAPIを作りましょう。@<code>{server/server.go}を作ります(@<list>{server1})。
+@<list>{store1}で実装した@<code>{Store}構造体の@<code>{mu}フィールドは排他制御のためのものです。@<code>{sync.RWMutex}構造体はゼロ値でそのまま使えるので、@<code>{New}関数内で明示的な初期化は必要ありません。続いてキーバリューストアにアクセスするためのAPIを作りましょう。@<code>{server/server.go}を作ります(@<list>{server1})。
 
 //list[server1][serverパッケージ][go]{
 package server
@@ -174,45 +175,35 @@ type Store interface {
 type handler struct {
 	store Store
 }
+
+type Server struct {
+	server http.Server
+}
 //}
 
-@<list>{server1}ではhandler型の内部でStoreインターフェースを保持します。これでStoreの実装を切り替えやすくなり、モックテストも行いやすくなります。続いてメソッドを定義します(@<list>{server2})。今回は簡略化のためにフレームワークであるGin@<fn>{gin}を使います。
+@<list>{server1}では@<code>{handler}型の内部で@<code>{Store}インターフェースを保持します。これで@<code>{Store}の実装を切り替えやすくなり、モックテストも行いやすくなります。続いて@<code>{handler}にメソッドを定義します(@<list>{server2})。今回は簡略化のためにフレームワークである@<b>{Gin}@<fn>{gin}を使います。
 
 //footnote[gin][@<href>{https://github.com/gin-gonic/gin}]
 
 //list[server2][serverパッケージの関数][go]{
-// ...
 import "github.com/gin-gonic/gin"
-// ...
-
-func New(port int, kv Store) *http.Server  {
-	h := &handler{
-		store: kv,
-	}
-	r := gin.Default()
-	r.GET("/:key", h.Get)
-	r.PUT("/", h.Put)
-	return &http.Server{
-		Addr:    ":" + strconv.Itoa(port),
-		Handler: r,
-	}
-}
 
 type Request struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
 }
 
+
 func (h *handler) Get(c *gin.Context) {
 	key := c.Param("key")
 	v, ok := h.store.Lookup(key)
 	if !ok {
-		c.JSON(404, gin.H{
+		c.JSON(http.StatusNotFound, gin.H{
 			"error": "not found",
 		})
 		return
 	}
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		key: v,
 	})
 }
@@ -222,18 +213,68 @@ func (h *handler) Put(c *gin.Context) {
 	c.BindJSON(&req)
 	err := h.store.Save(req.Key, string(req.Value))
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err,
 		})
 		return
 	}
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		req.Key: string(req.Value),
 	})
 }
 //}
 
-今回はGET、PUTメソッドでそれぞれデータの保存、取得を行っています。New関数ではmainパッケージでAPIサーバーを立ち上げる用の*http.Serverを返します。最後にmain.goを実装しましょう(@<list>{main})。
+今回はGET、PUTメソッドでそれぞれデータの保存、取得を行っています。続いてAPIを立ち上げるメソッドを準備しましょう(@<list>{server.run})。
+
+//list[server.run][mainパッケージの関数][go]{
+import (
+	// ...
+	"golang.org/x/sync/errgroup"
+)
+
+func New(port int, kv Store) *Server {
+	h := &handler{
+		store: kv,
+	}
+	r := gin.Default()
+	r.GET("/:key", h.Get)
+	r.PUT("/", h.Put)
+
+	return &Server{
+		server: http.Server{
+			Addr:    ":" + strconv.Itoa(port),
+			Handler: r,
+		},
+	}
+}
+
+func (s *Server) Run(ctx context.Context) error {
+	// errorを返したらコンテキストをキャンセル
+	eg, ctx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		return s.server.ListenAndServe()
+	})
+
+	// コンテキストキャンセルを受けたらサーバーのシャットダウン
+	<-ctx.Done()
+	sCtx, sCancel := context.WithTimeout(
+		context.Background(), 3*time.Second,
+	)
+	defer sCancel()
+	if err := s.server.Shutdown(sCtx); err != nil {
+		return err
+	}
+
+	// gorutineが終了するまで待つ
+	return eg.Wait()
+}
+//}
+
+@<list>{server.run}ではAPIの起動に必要な@<code>{Server}の初期化を@<code>{New}関数で行い、@<code>{Server.Run}メソッドで実際の立ち上げを行います。@<code>{Server.Run}では引数にcontext.Contextを受けて、コンテキストがキャンセルされたら@<code>{ListenAndServe}を止められるようにしています。ここでは準標準パッケージの@<code>{golang.org/x/sync/errgroup}を使っています。これにより1つのサブタスクでエラーが発生した場合に、@<code>{errgroup.WithContext}関数で生成したコンテキストをキャンセルすることができます。そしてgorutineで出したエラーを@<code>{*Server.Run}の返り値として呼び出し元に返すことができます。@<code>{errgroup}の使い方やExampleはドキュメント@<fn>{errgroup}をご覧ください。
+
+//footnote[errgroup][@<href>{https://pkg.go.dev/golang.org/x/sync/errgroup?tab=doc}]
+
+最後にmain.goを実装しましょう(@<list>{main})。
 
 //list[main][mainパッケージの関数][go]{
 package main
@@ -243,16 +284,18 @@ import (
 
 	//パッケージ名は変えてください
 	"github.com/******/kvraft/server"
-    "github.com/******/kvraft/store"
+	"github.com/******/kvraft/store"
 )
 
 func main() {
-    port := flag.Int("port", 3000, "key-value server port")
-    flag.Parse()
+	port := flag.Int("port", 3000, "key-value server port")
+	flag.Parse()
 
-    s := store.New()
-    srv := server.New(*port, s)
-    srv.ListenAndServe()
+	s := store.New()
+	srv := server.New(*port, s)
+
+	// とりあえずここでは context.Background() を渡す。
+	log.Println(srv.Run(context.Background()))
 }
 //}
 
