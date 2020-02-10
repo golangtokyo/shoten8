@@ -305,7 +305,8 @@ func main() {
 $ go run main.go
 
 $ curl -X PUT http://localhost:3000 \
-   -H "Content-Type: application/json" -d '{"key": "hello", "value": "golang"}'
+   -H "Content-Type: application/json" \
+   -d '{"key": "hello", "value": "golang"}'
 #結果
 {"hello":"golang"}
 
@@ -510,7 +511,7 @@ func (r *RaftAlg) replayWAL(ctx context.Context) (*wal.WAL, error) {
 	case r.doneRestoreLogC <- struct{}{}: // replayの終了を通知
 	case <-time.After(10 * time.Second):
 		return nil, errors.New(
-			"timeout(10s) while receiving done restore channel",
+			"timeout(10s) receiving done restore channel",
 		)
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -535,7 +536,6 @@ func (r *RaftAlg) replayWAL(ctx context.Context) (*wal.WAL, error) {
 import (
 	// ...
 	"github.com/coreos/etcd/raft/raftpb"
-	// ...
 )
 
 func (r *RaftAlg) publishEntries(
@@ -554,7 +554,9 @@ func (r *RaftAlg) publishEntries(
 		// 適用して良いをエントリをチャネル経由で通知
 		case r.commitC <- s:
 		case <-time.After(10 * time.Second):
-			return errors.New("timeout(10s) while sending commit channel")
+			return errors.New(
+				"timeout(10s) sending committed channel",
+			)
 		case <-ctx.Done():
 			return ctx.Err()
 		}
@@ -627,7 +629,9 @@ func (r *RaftAlg) serveRaftHTTP(ctx context.Context) error {
 
 	// コンテキストキャンセルを受けたらシャットダウン
 	<-ctx.Done()
-	sCtx, sCancel := context.WithTimeout(context.Background(), 1*time.Second)
+	sCtx, sCancel := context.WithTimeout(
+		context.Background(), 1*time.Second,
+	)
 	defer sCancel()
 	if err := srv.Shutdown(sCtx); err != nil {
 		return err
@@ -780,6 +784,7 @@ func (s *Store) Save(key string, value string) error {
 	if err != nil {
 		return err
 	}
+
 	err = s.Propose(buf.Bytes())
 	if err != nil {
 		return err
@@ -795,15 +800,15 @@ func (s *Store) Save(key string, value string) error {
 //list[store4][RunCommitReaderの実装][go]{
 func (s *Store) RunCommitReader(ctx context.Context) error {
 
-    // 起動時にWALのreplayを待つ
+	// 起動時にWALのreplayを待つ
 	select {
 	case <-s.Raft.DoneReplayWAL():
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-time.After(10 * time.Second):
 		return errors.New(
-            "kvraft: timeout(10s) while sending done replay channel",
-        )
+			"timeout(10s) sending done replay channel",
+		)
 	}
 
 	for {
@@ -816,9 +821,11 @@ func (s *Store) RunCommitReader(ctx context.Context) error {
 			if err := dec.Decode(&kvdata); err != nil {
 				return err
 			}
+
 			s.mu.Lock()
 			s.kvStore[kvdata.Key] = kvdata.Val
 			s.mu.Unlock()
+
 		case <-ctx.Done():
 			return ctx.Err()
 		}
@@ -857,9 +864,9 @@ func main() {
 
 //list[main3][main.goの修正②][go]{
 func main() {
-    // 続き...
+	// 続き...
 
-    ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	eg, ctx := errgroup.WithContext(ctx)
@@ -1013,17 +1020,17 @@ kvraft2がdownしていた時に更新が入ったのにもかかわらず、kvr
 func main() {
 	// ...
 
-    // joinフラグを追加
-    join := flag.Bool("join", false, "join an existing cluster")
-    flag.Parse()
+	// joinフラグを追加
+	join := flag.Bool("join", false, "join an existing cluster")
+	flag.Parse()
 
-    // ...
+	// ...
 
 	eg.Go(func() error {
 		return ra.Run(ctx, *join) //　引数追加
 	})
 
-    // ...
+	// ...
 }
 //}
 
@@ -1071,7 +1078,7 @@ func (r *RaftAlg) ChangeConf(op string, nodeID uint64, url string) error {
 }
 //}
 
-@<list>{ChangeConf}ではとりあえずノードの追加と削除をサポートしました。これの関数をAPIからstoreパッケージ経由でコールできるようにすれば良さそうです。そして@<code>{raft.RaftNode.ProposeConfChange}の結果はチャネル経由で@<code>{[]raftpb.Entry}型として受け取れます。そのため@<code>{[]raftpb.Entry}を処理している@<code>{*RaftAlg.publishEntries}メソッドも全面的に修正してあげます@<list>{publishEntries}。少しエラーハンドリングが多いので省略しています。
+@<list>{ChangeConf}ではとりあえずノードの追加と削除をサポートしました。この関数をAPIからstoreパッケージ経由でコールできるようにすれば良さそうです。@<code>{raft.RaftNode.ProposeConfChange}の結果はチャネル経由で@<code>{[]raftpb.Entry}型として受け取れます。そのため@<code>{[]raftpb.Entry}を処理している@<code>{*RaftAlg.publishEntries}メソッドも全面的に修正してあげます@<list>{publishEntries}。少しエラーハンドリングが多いので省略しています。
 
 //list[publishEntries][publishEntriesの修正][go]{
 func (r *RaftAlg) publishEntries(
@@ -1091,8 +1098,8 @@ func (r *RaftAlg) publishEntries(
 			case r.commitC <- s:
 			case <-time.After(10 * time.Second):
 				return errors.New(
-                    "timeout(10s) while sending commit channel",
-                )
+					"timeout(10s) sending committed",
+				)
 			case <-ctx.Done():
 				return ctx.Err()
 			}
@@ -1109,15 +1116,16 @@ func (r *RaftAlg) publishEntries(
 			case raftpb.ConfChangeAddNode:
 				if len(cc.Context) > 0 {
 					r.transport.AddPeer(
-                        types.ID(cc.NodeID), []string{string(cc.Context)},
-                    )
+						types.ID(cc.NodeID),
+						[]string{string(cc.Context)},
+					)
 				}
 			case raftpb.ConfChangeRemoveNode:
 				if cc.NodeID == uint64(r.id) {
 					// 終了するノードが自分ならエラー返す
 					return errors.New(
-                        "the cluster remove this node",
-                    )
+						"cluster removes this node",
+					)
 				}
 				r.transport.RemovePeer(types.ID(cc.NodeID))
 			}
@@ -1155,13 +1163,13 @@ type Store interface {
 // ...
 
 func New(port int, kv Store) *http.Server {
-    // ...
+	// ...
 
-    // ２つ追加
-    r.POST("/", h.Post)
-    r.DELETE("/", h.Delete)
+	// ２つ追加
+	r.POST("/", h.Post)
+	r.DELETE("/", h.Delete)
 
-    // ...
+	// ...
 }
 //}
 
@@ -1185,6 +1193,7 @@ func (h *handler) Post(c *gin.Context) {
 		})
 		return
 	}
+
 	err = h.store.Conf("add", nodeID, req.URL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -1207,6 +1216,7 @@ func (h *handler) Delete(c *gin.Context) {
 		})
 		return
 	}
+
 	err = h.store.Conf("remove", nodeID, req.URL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
