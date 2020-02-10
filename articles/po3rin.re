@@ -492,7 +492,7 @@ import (
 )
 
 func (r *RaftAlg) replayWAL(ctx context.Context) (*wal.WAL, error) {
-	// WALディレクトリの存在チェック。無ければ作る
+	// WALディレクトリの存在チェック。無ければ作る。
 	if !wal.Exist(r.waldir) {
 		_ = os.Mkdir(r.waldir, 0750)
 		w, _ := wal.Create(r.waldir, nil)
@@ -544,7 +544,8 @@ func (r *RaftAlg) publishEntries(
 	for i := range ents {
 		if ents[i].Type != raftpb.EntryNormal ||
 		len(ents[i].Data) == 0 {
-			// EntryNormal 型のエントリのみをサポートする(後述)
+			// EntryNormal 型のエントリのみをサポートする
+			// 他のタイプについては後述
 			continue
 		}
 		s := string(ents[i].Data)
@@ -655,36 +656,24 @@ func (r *RaftAlg) ReportSnapshot(id uint64, status raft.SnapshotStatus) {}
 func (r *RaftAlg) Run(ctx context.Context) error {
 	// 続き...
 
-	defer r.wal.Close()
-	defer r.node.Stop()
-	defer r.transport.Stop()
-	defer close(r.doneRestoreLogC)
-	defer close(r.commitC)
+	eg, ctx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		return r.serveRaftHTTP(ctx)
+	})
+	eg.Go(func() error {
+		return r.serveChannels(ctx)
+	})
 
-	errC := make(chan error)
-	go func() {
-		errC <- r.serveRaftHTTP(ctx)
-	}()
-	go func() {
-		errC <- r.serveChannels(ctx) // あとで実装
-	}()
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case err := <-errC:
-		if err != nil {
-			return err
-		}
+	if err := eg.Wait(); err != nil {
+		return fmt.Errorf("tryraft: stop serving Raft: %w", err)
 	}
-
 	return nil
 }
 //}
 
 === Raftや外部パッケージとのやりとりをチャネルでさばく
 
-続いてRaftとチャネル経由でやりとりする為の@<code>{*RaftAlg.serveChannels}を実装します(@<list>{serveChannels})。ここでもエラーハンドリングが多いので省略します。
+続いてRaftとチャネル経由でやりとりする為の@<code>{*RaftAlg.serveChannels}を実装します(@<list>{serveChannels})。ここでもエラーハンドリングが多いのである程度省略します。
 
 //list[serveChannels][serveChannelsの実装][go]{
 func (r *RaftAlg) serveChannels(ctx context.Context) error {
@@ -704,7 +693,10 @@ func (r *RaftAlg) serveChannels(ctx context.Context) error {
 			r.transport.Send(rd.Messages)
 
 			// コミット済みエントリを通知
-			_ = r.publishEntries(ctx, rd.CommittedEntries)
+			err := r.publishEntries(ctx, rd.CommittedEntries)
+			if err != nil {
+				return err
+			}
 			r.node.Advance()
 
 		case err := <-r.transport.ErrorC:
@@ -796,12 +788,14 @@ func (s *Store) Save(key string, value string) error {
 }
 //}
 
-先ほど実装した@<code>{*RaftAlg.Propose}メソッドを叩いています。これでAPIが受け取った処理に対してRaftがコンセンサスをとってくれます。その結果を受けたり、別のノードからのエントリ追加要求を受ける仕組みが必要です。これを@<code>{*Store.RunCommitReader}メソッドとして実装しましょう(@<list>{store4})。
+先ほど実装した@<code>{*RaftAlg.Propose}メソッドを叩いています。ここでは標準パッケージである@<code>{encoding/gob}@<fn>{gob}パッケージを使っています。簡単に説明すると@<code>{encoding/gob}は任意の構造体をバイト配列にエンコードし、その配列をデコードして構造体に戻すことができるGo特化のエンコーダ/デコーダです。これでAPIが受け取った処理に対してRaftがコンセンサスをとってくれます。その結果を受けたり、別のノードからのエントリ追加要求を受ける仕組みが必要です。これを@<code>{*Store.RunCommitReader}メソッドとして実装しましょう(@<list>{store4})。
+
+//footnote[gob][@<href>{https://golang.org/pkg/encoding/gob/}]
 
 //list[store4][RunCommitReaderの実装][go]{
 func (s *Store) RunCommitReader(ctx context.Context) error {
 
-    // WALのreplayを待つ
+    // 起動時にWALのreplayを待つ
 	select {
 	case <-s.Raft.DoneReplayWAL():
 	case <-ctx.Done():
@@ -900,7 +894,12 @@ func main() {
 }
 //}
 
-ここまでの実装で気付きでしょうが、@<list>{main3}においてgorutineで走らせているすべての関数はcontextでキャンセル可能になっています。これにより特定のシグナルもしくはerrgroupがエラーを検知したらコンテキストキャンセルが行われ、すべてのgorutineで起動しているプロセスをきっちり終了できます。どのエラーがノードを終了し、どのエラーがノードの起動状態を継続するかを議論することは多くの誌面を使ってしまうので今回はこのようなシンプルなエラーハンドリングにしています。おめでとうございます。ひとまずRaftアルゴリズムを用いた分散キーバリューストアが完成しました。
+ここまでの実装で気付きでしょうが、@<list>{main3}においてgorutineで走らせているすべての関数はcontextでキャンセル可能になっています。これにより特定のシグナルもしくはerrgroupがエラーを検知したらコンテキストキャンセルが行われ、すべてのgorutineで起動しているプロセスをきっちり終了できます(@<img>{cancel})。当然@<code>{SIGTERM}などのシグナルを受け取ったら親が責任を持ってコンテキストキャンセルを行い終了させます。
+
+//image[cancel][エラー発生時にエラーを親まで返して、コンテキストキャンセルを呼んでもらうことで全てのgorutineを片付ける][scale=0.9]{
+//}
+
+どのエラーがノードを終了し、どのエラーがノードの起動状態を継続するかを議論することは多くの誌面を使ってしまうので今回はこのようなシンプルなエラーハンドリングにしています。おめでとうございます。ひとまずRaftアルゴリズムを用いた分散キーバリューストアが完成しました。
 
 === 動作確認で理解するRaft
 
@@ -1020,9 +1019,9 @@ func main() {
 
     // ...
 
-	go func() {
-		errC <- ra.Run(ctx, *join)
-	}()
+	eg.Go(func() error {
+		return ra.Run(ctx, *join) //　引数追加
+	})
 
     // ...
 }
@@ -1115,6 +1114,7 @@ func (r *RaftAlg) publishEntries(
 				}
 			case raftpb.ConfChangeRemoveNode:
 				if cc.NodeID == uint64(r.id) {
+					// 終了するノードが自分ならエラー返す
 					return errors.New(
                         "the cluster remove this node",
                     )
@@ -1132,7 +1132,7 @@ func (r *RaftAlg) publishEntries(
 //list[store5][storeパッケージの修正][go]{
 type Raft interface {
 	Propose(prop []byte) error
-	ChangeConf(op string, id uint64, url string) error　// 追加
+	ChangeConf(op string, id uint64, url string) error // 追加
 	Commit() <-chan string
 	DoneReplayWAL() <-chan struct{}
 }
@@ -1180,19 +1180,19 @@ func (h *handler) Post(c *gin.Context) {
 
 	nodeID, err := strconv.ParseUint(req.ID, 0, 64)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
 	err = h.store.Conf("add", nodeID, req.URL)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"add node": "ok",
 	})
 }
@@ -1202,19 +1202,19 @@ func (h *handler) Delete(c *gin.Context) {
 	c.BindJSON(&req)
 	nodeID, err := strconv.ParseUint(req.ID, 0, 64)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
 	err = h.store.Conf("remove", nodeID, req.URL)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"remove node": "ok",
 	})
 }
@@ -1241,12 +1241,12 @@ $ curl -X POST localhost:12380 \
 
 //list[try8][ノードの立ち上げ][go]{
 $ go run main.go --id 4 --cluster \
-    http://127.0.0.1:12379,http://127.0.0.1:22379,\
-    http://127.0.0.1:32379,http://127.0.0.1:42379 \
-    --port 42380 --join
+http://127.0.0.1:12379,http://127.0.0.1:22379,\
+http://127.0.0.1:32379,http://127.0.0.1:42379 \
+--port 42380 --join
 //}
 
-これでノードが4台になりました。実際にPUT、GETでデータが4台のノードに正しく入っていることを確認してください。ノードの削除は@<list>{try9}で実行できます。
+これでノードが4台になりました。実際にPUT、GETでデータが4台のノードに正しく入っていることを確認してください。クラスターからのノードの削除は@<list>{try9}で実行できます。
 
 //list[try9][ノードの削除][go]{
 curl -X DELETE localhost:12380 \
