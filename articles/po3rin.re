@@ -342,7 +342,7 @@ Raftアルゴリズムをゼロから実装するのはかなり骨の折れる�
 //image[arch2][storeからraftalgパッケージを利用する][scale=1]{
 //}
 
-この節では最終的に@<list>{tree2}ような構成になります。
+この節では最終的に@<list>{tree2}のような構成になります。
 
 //list[tree2][最終的な構成][go]{
 .
@@ -408,7 +408,8 @@ github.com/coreos/go-systemd/journal: no matching versions for query "latest"
 //}
 
 //list[gomod][go.modに追加][go]{
-replace github.com/coreos/go-systemd => github.com/coreos/go-systemd/v22 v22.0.0
+replace github.com/coreos/go-systemd => //紙面上では長いので改行
+	github.com/coreos/go-systemd/v22 v22.0.0
 //}
 
 //footnote[issue][@<href>{https://github.com/coreos/go-systemd/issues/321}]
@@ -437,7 +438,7 @@ func (r *RaftAlg) Run(ctx context.Context) error {
 }
 //}
 
-そしてクラスターのメンバーのURLをetcd/raftパッケージで使う用の型に変換します。最終的にノードを起動するための関数の引数に渡すためです@<list>{peers}。
+そしてクラスターのメンバーのURLをetcd/raftパッケージで使う用の型に変換します(@<list>{peers})。最終的にノードを起動するための関数の引数に渡すためです。
 
 //list[peers][peersの型変換][go]{
 func (r *RaftAlg) Run(ctx context.Context) error {
@@ -551,7 +552,7 @@ func (r *RaftAlg) publishEntries(
 		s := string(ents[i].Data)
 
 		select {
-		// 適用して良いをエントリをチャネル経由で通知
+		// 適用して良いをエントリをチャネル経由で通知する
 		case r.commitC <- s:
 		case <-time.After(10 * time.Second):
 			return errors.New(
@@ -713,7 +714,7 @@ func (r *RaftAlg) serveChannels(ctx context.Context) error {
 }
 //}
 
-ここではコンテキストキャンセルや、トランスポーターからのエラーを受ける以外に、重要な２つのcaseを扱っています。１つ目のcaseは定期的に@<code>{time.Ticker}で実行しなければならない@<code>{raft.Node.Tick}メソッドを実行するケースです。Raftには、ハートビートと選挙タイムアウトの2つの重要なタイムアウトがあると説明しました。etcd/raftパッケージの内部では、時間はTickで抽象化されています。たとえば@<list>{raftalg2}において@<code>{raft.Config.HeartbeatTick}フィールドの値は1に設定しましたが、この数字の単位は何なのかは説明しませんでした。これは@<code>{raft.Node.Tick}メソッドが1回呼び出されるたびにハートビートを送るという意味になっています。2つ目のcaseは@<code>{raft.Node.Ready}メソッド経由でチャネルを受け取る処理です。これは現在のノードの状態を受け取ります。これにはコミット済みのエントリ(@<code>{raft.Ready.rd.CommittedEntries})も含んでいます。このコミット済みエントリはState Mashine（今回の例ではキーバリューストア）に適用できるので、先ほど実装した@<code>{*RaftAlg.publishEntries}に引数として渡してあげます。続いての実装ではraftalgパッケージを利用するパッケージ（今回の例ではstoreパッケージ）がチャネルを直で触らなくてよいようにチャネルを関数でラップしてあげます(@<list>{wrapChannel})。このパターンは筆者が勝手に@<b>{function wrap channel}パターンと呼んでいます。標準パッケージの@<code>{context.Done}メソッドなどはまさにこのパターンで実装されており、チャネルを直で触らなくてもよい実装になっています。
+ここではコンテキストキャンセルや、トランスポーターからのエラーを受ける以外に、重要な２つの@<code>{case}を扱っています。１つ目の@<code>{case}は定期的に@<code>{time.Ticker}で実行しなければならない@<code>{raft.Node.Tick}メソッドを実行するケースです。Raftには、ハートビートと選挙タイムアウトの2つの重要なタイムアウトがあると説明しました。etcd/raftパッケージの内部では、時間はTickで抽象化されています。たとえば@<list>{raftalg2}において@<code>{raft.Config.HeartbeatTick}フィールドの値は1に設定しましたが、この数字の単位は何なのかは説明しませんでした。これは@<code>{raft.Node.Tick}メソッドが1回呼び出されるたびにハートビートを送るという意味になっています。2つ目の@<code>{case}は@<code>{raft.Node.Ready}メソッド経由でチャネルを受け取る処理です。これは現在のノードの状態を受け取ります。これにはコミット済みのエントリ(@<code>{raft.Ready.rd.CommittedEntries})も含んでいます。このコミット済みエントリはState Machine（今回の例ではキーバリューストア）に適用できるので、先ほど実装した@<code>{*RaftAlg.publishEntries}に引数として渡してあげます。続いての実装ではraftalgパッケージを利用するパッケージ（今回の例ではstoreパッケージ）がチャネルを直で触らなくてよいようにチャネルを関数でラップしてあげます(@<list>{wrapChannel})。このパターンは筆者が勝手に@<b>{function wrap channel}パターンと呼んでいます。標準パッケージの@<code>{context.Done}メソッドなどはまさにこのパターンで実装されており、チャネルを直で触らなくてもよい実装になっています。
 
 //list[wrapChannel][チャネルを関数でWrap][go]{
 func (r *RaftAlg) Commit() <-chan string {
@@ -725,7 +726,7 @@ func (r *RaftAlg) DoneReplayWAL() <-chan struct{} {
 }
 //}
 
-raftalgパッケージの最後にstoreパッケージがRaftを利用できるようにメソッドを準備してあげます。Proposeが内部でログのコンセンサスをとってくれます。
+raftalgパッケージの最後にstoreパッケージがRaftを利用できるようにメソッドを準備してあげます。@<code>{Propose}メソッドが内部でログのコンセンサスをとってくれます。
 
 //list[propose][チャネルを関数でWrap][go]{
 func (r *RaftAlg) Propose(prop []byte) error {
@@ -780,7 +781,7 @@ func New(raft Raft) *Store {
 //list[store3][Saveメソッドの修正][go]{
 func (s *Store) Save(key string, value string) error {
 	var buf bytes.Buffer
-	err := gob.NewEncoder(&buf).Encode(kv{key, value});
+	err := gob.NewEncoder(&buf).Encode(kv{key, value})
 	if err != nil {
 		return err
 	}
@@ -940,7 +941,7 @@ kvraft3: go run main.go --id 3 --cluster \
 goreman -logtime=false start | grep Raft-debug
 //}
 
-立ち上げた時点では、リーダー選挙のようすがログで見れます。その中でkvraft2のログの重要部分だけを抽出してみます(@<list>{log})。
+立ち上げた時点では、リーダー選挙の様子がログで見れます。その中でkvraft2のログの重要部分だけを抽出してみます(@<list>{log})。
 
 //list[log][クラスター立ち上げ時のkvraft2のログ][go]{
 2 became follower at term 1                                  // ①
@@ -1078,7 +1079,7 @@ func (r *RaftAlg) ChangeConf(op string, nodeID uint64, url string) error {
 }
 //}
 
-@<list>{ChangeConf}ではとりあえずノードの追加と削除をサポートしました。この関数をAPIからstoreパッケージ経由でコールできるようにすれば良さそうです。@<code>{raft.RaftNode.ProposeConfChange}の結果はチャネル経由で@<code>{[]raftpb.Entry}型として受け取れます。そのため@<code>{[]raftpb.Entry}を処理している@<code>{*RaftAlg.publishEntries}メソッドも全面的に修正してあげます@<list>{publishEntries}。少しエラーハンドリングが多いので省略しています。
+@<list>{ChangeConf}ではとりあえずノードの追加と削除をサポートしました。この関数をAPIからstoreパッケージ経由でコールできるようにすれば良さそうです。@<code>{raft.RaftNode.ProposeConfChange}の結果はチャネル経由で@<code>{[]raftpb.Entry}型として受け取れます。そのため@<code>{[]raftpb.Entry}を処理している@<code>{*RaftAlg.publishEntries}メソッドも全面的に修正してあげます(@<list>{publishEntries})。少しエラーハンドリングが多いので省略しています。
 
 //list[publishEntries][publishEntriesの修正][go]{
 func (r *RaftAlg) publishEntries(
@@ -1086,8 +1087,6 @@ func (r *RaftAlg) publishEntries(
 ) error {
 	for i := range ents {
 		switch ents[i].Type {
-
-		// 先ほどの実装そのまま
 		case raftpb.EntryNormal:
 			if len(ents[i].Data) == 0 {
 				continue
@@ -1135,7 +1134,7 @@ func (r *RaftAlg) publishEntries(
 }
 //}
 
-これでraftalgパッケージの修正が終わりました。続いてstoreパッケージを修正します。具体的には@<code>{*RaftAlg.ChangeConf}をcallするようにします@<list>{store5}。
+これでraftalgパッケージの修正が終わりました。続いてstoreパッケージを修正します。具体的には@<code>{*RaftAlg.ChangeConf}をcallするようにします(@<list>{store5})。
 
 //list[store5][storeパッケージの修正][go]{
 type Raft interface {
@@ -1173,7 +1172,7 @@ func New(port int, kv Store) *http.Server {
 }
 //}
 
-@<list>{server3}ではPOSTとDELETEを追加しています。それぞれノードの追加と削除です。最後に@<code>{*server.handler}を追加してあげます@<list>{server4}。
+@<list>{server3}ではPOSTとDELETEを追加しています。それぞれノードの追加と削除です。最後に@<code>{*server.handler}を追加してあげます(@<list>{server4})。
 
 //list[server4][serverパッケージの修正②][go]{
 
