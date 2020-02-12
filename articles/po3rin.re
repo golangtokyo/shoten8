@@ -258,7 +258,7 @@ func (s *Server) Run(ctx context.Context) error {
 	// コンテキストキャンセルを受けたらサーバーのシャットダウン
 	<-ctx.Done()
 	sCtx, sCancel := context.WithTimeout(
-		context.Background(), 3*time.Second,
+		context.Background(), 10*time.Second,
 	)
 	defer sCancel()
 	if err := s.server.Shutdown(sCtx); err != nil {
@@ -270,7 +270,7 @@ func (s *Server) Run(ctx context.Context) error {
 }
 //}
 
-@<list>{server.run}ではAPIの起動に必要な@<code>{Server}の初期化を@<code>{New}関数で行い、@<code>{Server.Run}メソッドで実際の立ち上げを行います。@<code>{Server.Run}では引数にcontext.Contextを受けて、コンテキストがキャンセルされたら@<code>{ListenAndServe}をとめられるようにしています。ここでは準標準パッケージの@<code>{golang.org/x/sync/errgroup}を使っています。これにより1つのサブタスクでエラーが発生した場合に、@<code>{errgroup.WithContext}関数で生成したコンテキストをキャンセルできます。そしてgorutineで出したエラーを@<code>{*Server.Run}の戻り値として呼び出し元に返すことができます。@<code>{errgroup}の使い方やExampleはドキュメント@<fn>{errgroup}をご覧ください。
+@<list>{server.run}ではAPIの起動に必要な@<code>{Server}の初期化を@<code>{New}関数で行い、@<code>{Server.Run}メソッドで実際の立ち上げを行います。@<code>{Server.Run}では呼び出し元がコンテキストを経由で@<code>{ListenAndServe}をとめられるようにしています。ここでは準標準パッケージの@<code>{golang.org/x/sync/errgroup}を使っています。これにより1つのサブタスクでエラーが発生した場合に、@<code>{errgroup.WithContext}関数で生成したコンテキストをキャンセルできます。そしてgorutineで出したエラーを@<code>{*Server.Run}の戻り値として呼び出し元に返すことができます。@<code>{errgroup}の使い方やExampleはドキュメント@<fn>{errgroup}をご覧ください。
 
 //footnote[errgroup][@<href>{https://pkg.go.dev/golang.org/x/sync/errgroup?tab=doc}]
 
@@ -631,7 +631,7 @@ func (r *RaftAlg) serveRaftHTTP(ctx context.Context) error {
 	// コンテキストキャンセルを受けたらシャットダウン
 	<-ctx.Done()
 	sCtx, sCancel := context.WithTimeout(
-		context.Background(), 1*time.Second,
+		context.Background(), 10*time.Second,
 	)
 	defer sCancel()
 	if err := srv.Shutdown(sCtx); err != nil {
@@ -642,7 +642,7 @@ func (r *RaftAlg) serveRaftHTTP(ctx context.Context) error {
 }
 //}
 
-@<list>{serve}では@<list>{server.run}と同じように、コンテキスト経由でサーバーを終了できるようにしています。@<code>{rafthttp.Transport}インターフェースには@<code>{raft.Raft}インターフェースを満たした実装を渡す必要があります。@<code>{raft.Raft}インターフェースがもつ4つのメソッドを@<code>{*RaftAlg}に実装しましょう(@<list>{implRaft})。
+@<list>{serve}では@<list>{server.run}と同じように、@<code>{*RaftAlg.serveRaftHTTP}メソッドの呼び出し元がコンテキスト経由でサーバーを終了できるようにしています。@<code>{rafthttp.Transport}インターフェースには@<code>{raft.Raft}インターフェースを満たした実装を渡す必要があります。@<code>{raft.Raft}インターフェースがもつ4つのメソッドを@<code>{*RaftAlg}に実装しましょう(@<list>{implRaft})。
 
 //list[implRaft][raft.Raftインターフェースを実装する][go]{
 func (r *RaftAlg) Process(ctx context.Context, m raftpb.Message) error {
@@ -714,7 +714,7 @@ func (r *RaftAlg) serveChannels(ctx context.Context) error {
 }
 //}
 
-ここではコンテキストキャンセルや、トランスポーターからのエラーを受ける以外に、重要な２つの@<code>{case}を扱っています。１つ目の@<code>{case}は定期的に@<code>{time.Ticker}で実行しなければならない@<code>{raft.Node.Tick}メソッドを実行するケースです。Raftには、ハートビートと選挙タイムアウトの2つの重要なタイムアウトがあると説明しました。etcd/raftパッケージの内部では、時間はTickで抽象化されています。たとえば@<list>{raftalg2}において@<code>{raft.Config.HeartbeatTick}フィールドの値は1に設定しましたが、この数字の単位は何なのかは説明しませんでした。これは@<code>{raft.Node.Tick}メソッドが1回呼び出されるたびにハートビートを送るという意味になっています。2つ目の@<code>{case}は@<code>{raft.Node.Ready}メソッド経由でチャネルを受け取る処理です。これは現在のノードの状態を受け取ります。これにはコミット済みのエントリ(@<code>{raft.Ready.rd.CommittedEntries})も含んでいます。このコミット済みエントリはState Machine（今回の例ではキーバリューストア）に適用できるので、先ほど実装した@<code>{*RaftAlg.publishEntries}に引数として渡してあげます。続いての実装ではraftalgパッケージを利用するパッケージ（今回の例ではstoreパッケージ）がチャネルを直で触らなくてよいようにチャネルを関数でラップしてあげます(@<list>{wrapChannel})。このパターンは筆者が勝手に@<b>{function wrap channel}パターンと呼んでいます。標準パッケージの@<code>{context.Done}メソッドなどはまさにこのパターンで実装されており、チャネルを直で触らなくてもよい実装になっています。
+ここではコンテキストキャンセルや、トランスポーターからのエラーを受ける以外に、重要な２つの@<code>{case}を扱っています。１つ目の@<code>{case}は定期的に@<code>{time.Ticker}で実行しなければならない@<code>{raft.Node.Tick}メソッドを実行するケースです。Raftには、ハートビートと選挙タイムアウトの2つの重要なタイムアウトがあると説明しました。etcd/raftパッケージの内部では、時間はTickで抽象化されています。たとえば@<list>{raftalg2}において@<code>{raft.Config.HeartbeatTick}フィールドの値は1に設定しましたが、この数字の単位は何なのかは説明しませんでした。これは@<code>{raft.Node.Tick}メソッドが1回呼び出されるたびにハートビートを送るという意味になっています。2つ目の@<code>{case}は@<code>{raft.Node.Ready}メソッド経由でチャネルを受け取る処理です。これは現在のノードの状態を受け取ります。これにはコミット済みのエントリ(@<code>{raft.Ready.rd.CommittedEntries})も含んでいます。このコミット済みエントリはState Machine（今回の例ではキーバリューストア）に適用できるので、先ほど実装した@<code>{*RaftAlg.publishEntries}に引数として渡してあげます。続いての実装ではraftalgパッケージを利用するパッケージ（今回の例ではstoreパッケージ）がチャネルを直で触らなくてよいようにチャネルをメソッドでラップしてあげます(@<list>{wrapChannel})。このパターンは筆者が勝手に@<b>{method wrap channel}パターンと呼んでいます。標準パッケージの@<code>{context.Done}メソッドなどはまさにこのパターンで実装されており、チャネルを直で触らなくてもよい実装になっています。
 
 //list[wrapChannel][チャネルを関数でWrap][go]{
 func (r *RaftAlg) Commit() <-chan string {
@@ -902,7 +902,7 @@ func main() {
 }
 //}
 
-ここまでの実装で気付きでしょうが、@<list>{main3}においてgorutineで走らせているすべての関数はcontextでキャンセル可能になっています。これにより特定のシグナルもしくはerrgroupがエラーを検知したらコンテキストキャンセルが行われ、すべてのgorutineで起動しているプロセスをきっちり終了できます(@<img>{cancel})。当然@<code>{SIGTERM}などのシグナルを受け取ったら親が責任を持ってコンテキストキャンセルを行い終了させます。
+ここまでの実装で気付きでしょうが、@<list>{main3}においてgorutineで走らせているすべての関数はcontextでキャンセル可能になっています。これにより特定のシグナルもしくはerrgroupがエラーを検知したらコンテキストキャンセルが行われ、すべてのgorutineで起動しているサブタスクをきっちり終了できます(@<img>{cancel})。当然@<code>{SIGTERM}などのシグナルを受け取ったら親が責任を持ってコンテキストキャンセルを行い終了させます。
 
 //image[cancel][エラー発生時にエラーを親まで返して、コンテキストキャンセルを呼んでもらうことで全てのgorutineを片付ける][scale=0.9]{
 //}
