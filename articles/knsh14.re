@@ -23,55 +23,55 @@ text/templateパッケージのテンプレートではwith句@<fn>{link_actions
 意味のない条件を防ぐためにテンプレートをチェックし実行する前にエラーを出します。
 
 具体的な例を用いて説明します。
-with句を使ったテンプレートを使うコードを@<list>{with-statement-example}に示します。
+with句を使ったテンプレートを使うコードを@<list>{with_statement_example}に示します。
 
-//listnum[with-statement-example][with句を使ったテンプレートのサンプル]{
+//listnum[with_statement_example][with句を使ったテンプレートのサンプル]{
 package main
 
 import (
-	"log"
-	"os"
-	"text/template"
+  "log"
+  "os"
+  "text/template"
 )
 
 type Person struct {
-	Name string
-	Age  int
+  Name string
+  Age  int
 }
 
 const (
-	goodTpl = `hello, {{ with .Name }}my name is {{ .Name }}{{ else }}, nice to meet you{{ end }}.`
-	badTpl  = `hello, {{ with .Name }}I am {{ .Bar }} years old{{ else }}, nice to meet you{{ end }}.`
+  goodTpl = `hello, {{ with .Name }}my name is {{ .Name }}{{ else }}, nice to meet you{{ end }}.`
+  badTpl  = `hello, {{ with .Name }}I am {{ .Bar }} years old{{ else }}, nice to meet you{{ end }}.`
 )
 
 func Good() {
-	v := Person{
-		Name: "knsh14",
-		Age:  2020,
-	}
-	tmpl, err := template.New("good").Parse(goodTpl)
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = tmpl.Execute(os.Stdout, v)
-	if err != nil {
-		log.Fatalf("execution: %s", err)
-	}
+  v := Person{
+    Name: "knsh14",
+    Age:  2020,
+  }
+  tmpl, err := template.New("good").Parse(goodTpl)
+  if err != nil {
+    log.Fatal(err)
+  }
+  err = tmpl.Execute(os.Stdout, v)
+  if err != nil {
+    log.Fatalf("execution: %s", err)
+  }
 }
 
 func Bad() {
-	v := Person{
-		Name: "knsh14",
-		Age:  2020,
-	}
-	tmpl, err := template.New("bad").Parse(badTpl)
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = tmpl.Execute(os.Stdout, v)
-	if err != nil {
-		log.Fatalf("execution: %s", err)
-	}
+  v := Person{
+    Name: "knsh14",
+    Age:  2020,
+  }
+  tmpl, err := template.New("bad").Parse(badTpl)
+  if err != nil {
+    log.Fatal(err)
+  }
+  err = tmpl.Execute(os.Stdout, v)
+  if err != nil {
+    log.Fatalf("execution: %s", err)
+  }
 }
 //}
 
@@ -82,7 +82,23 @@ Badのようなテンプレートの場合警告が出るようにチェック�
 テンプレートの静的解析は、Goコードの静的解析のように実行する前に別のツールとして実行するのはたいへんです。
 そのため、コードを実行する際に@<code>{text/template.Template}型の変数に対してチェックします。
 もしwith句が@<code>{true}の場合にその変数を使用していなければ、@<code>{ErrNotFound}を返すようなチェッカーを作成します。
-28行目の@<code>{tmpl.Execute}関数を実行する前に実行して、エラーがなければそのまま実行します。
+@<list>{example_withcheck_execute}のように@<code>{template.Execute}関数を実行する前にチェックします。
+
+//list[example_withcheck_execute][withcheckの実行例][go]{
+input := `{{ with .Foo}}{{.Bar}}{{end}}`
+tpl, err := template.New("test").Parse(input)
+if err != nil {
+  log.Fatal(err)
+}
+
+if err := withcheck.Check(tpl); err != nil { // not found
+  log.Fatal(err)
+}
+
+if err := tpl.Execute(os.Stdout, v); err != nil {
+  log.Fatalf("execution: %s", err)
+}
+//}
 
 == withckeckの設計
 このチェックツールをwithcheckとしてGitHub@<fn>{withcheck_github_link}に公開しています。
