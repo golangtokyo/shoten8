@@ -124,15 +124,14 @@ TUIツールをいくつか紹介したところで、実際に簡単なTUIツ�
 実装は大まかに3ステップになります。
 
  1. ファイル一覧を取得
- 2. ファイル一覧を表示する画面を作成
+ 2. ファイル一覧画面を作成
  3. ファイルのプレビュー画面を作成し中身を表示する
 
 読者が理解しやすいように、すべてmainパッケージに実装します。なお、ファイル分けはします。
 では、やっていきましょう。
 
-==== ファイル一覧を取得
-まず、file.goファイルを作成して、@<code>{ioutil}パッケージの@<code>{ReadDir()}関数を使用して、
-@<list>{get_files}のカレントディレクトリ配下のファイル情報のみを取得する関数を作成します。
+=== ファイル一覧を取得
+まず、@<code>{file.go}ファイルを作成して、@<code>{ioutil}パッケージの@<code>{ReadDir()}関数で@<list>{get_files}のカレントディレクトリ配下のファイル情報のみを取得する関数を作成します。
 
 //listnum[get_files][ファイル一覧を取得][go]{
 package main
@@ -159,7 +158,7 @@ func Files(dir string) ([]os.FileInfo, error) {
 }
 //}
 
-続いて、file_test.goファイルを作成して、@<list>{test_get_files}のテストを書きます。
+続いて、@<code>{file_test.go}ファイルを作成して、@<list>{test_get_files}のテストを書きます。
 
 //listnum[test_get_files][ファイル一覧取得関数のテスト][go]{
 package main
@@ -239,13 +238,12 @@ PASS
 ok      github.com/skanehira/shoten8-sample-tui 0.007s
 //}
 
-==== ファイル一覧を表示する画面を作成
+=== ファイル一覧画面を作成
 ファイル一覧を取得する関数ができたので、次にいよいよtviewを使って画面を作っていきます。
 ファイルを選択して何かを操作するインタフェースはtview.Table@<fn>{about_tview_table}を使います。
+まず、@<code>{file_panel.go}ファイルを作成して、@<list>{file_panel_struct}の構造体を用意します。
 
 //footnote[about_tview_table][https://github.com/rivo/tview/wiki/Table]
-
-まず、file_panel.goファイルを作成して、@<list>{file_panel_struct}の構造体を用意します。
 
 //listnum[file_panel_struct][FilePanel][go]{
 package main
@@ -264,9 +262,8 @@ type FilePanel struct {
 //}
 
 選択したファイルをプレビューできるようにするため、
-@<code>{Files()}で取得したファイルをfilesフィールドに持たせます。
-
-次に、@<list>{new_file_panel}のNew関数を用意します。
+@<code>{Files()}で取得したファイルを@<code>{files}フィールドに持たせます。
+次に@<list>{new_file_panel}のNew関数を用意します。
 
 //listnum[new_file_panel][FilePanelのNew関数][go]{
 func NewFilePanel() *FilePanel {
@@ -292,7 +289,7 @@ func NewFilePanel() *FilePanel {
  * @<code>{SetSelectable()}は行と列を選択できるかどうかを設定、1つ目の引数は行、2つ目は列
 
 関数の詳細はGoDocを参照していただくとして、基本的にこういった流れで画面を定義していきます。
-次に、いくつか関数を追加していきます。追加する関数は@<list>{file_panel_methods}です。
+次に@<list>{file_panel_methods}の関数を追加していきます。
 
 //listnum[file_panel_methods][FilePanelの関数][go]{
 func (f *FilePanel) SetFiles(files []os.FileInfo) {
@@ -327,11 +324,10 @@ func (f *FilePanel) UpdateView() {
 
 @<code>{SetFiles()}は@<code>{Files}で取得したファイル情報を@<code>{FilePanel.files}にセットします。
 @<code>{NewFilePanel()}でfilesにセットしてもよいですが、役割が異なるので別関数として切り出します。
-@<code>{SelectedFile()}は現在選択しているファイル情報を取得します。@<code>{f.GetSelection()}は現在テーブルの行と列を取得できるのでそれを利用しています。
+@<code>{SelectedFile()}は現在選択しているファイル情報を取得します。@<code>{f.GetSelection()}は現在選択しているテーブルの行と列のインデックスを取得できるのでそれを利用しています。
 
 @<code>{Keybinding()}は@<code>{FilePanel}のキーバインドを設定します。
-@<code>{tview.Table}の@<code>{SetSelectionChangedFunc()}は選択する項目が変わるたびに呼び出されます。関数に行と列のindexを取得できます。
-indexを使ってfilesからファイル情報を取得します。なお、プレビュー画面はまだ作成していないのでいったんToDoとします。
+@<code>{tview.Table}の@<code>{SetSelectionChangedFunc()}は選択する項目が変わるたびに呼び出されます。関数@<code>{func(row, col int)}はせんたくしている行と列のインデックスを受け取るので、そのインデックスを使ってfilesからファイル情報を取得します。なお、プレビュー画面はまだ作成していないのでいったんToDoとします。
 
 @<code>{UpdateView()}は画面描画をします。@<code>{tview.Table}では、セルという単位で描画していきますので、
 @<code>{tview.Table}の@<code>{SetCell()}関数を使用します。
@@ -347,6 +343,8 @@ table.SetCell(1, 1, tview.NewTableCell("2行2列目"))
 //}
 
 ファイル一覧を表示して、選択する画面の実装は以上です。
+
+=== 全体を管理するGUI構造体
 次に@<code>{gui.go}ファイルを作成して、@<list>{about_gui}のファイル一覧画面とプレビュー画面を管理する役割を持つ構造体GUIとそれを生成するNew関数を用意します。
 
 //listnum[about_gui][画面を管理するためのGUI構造体][go]{
@@ -375,10 +373,7 @@ func NewGUI() *GUI {
 //}
 
 @<code>{tview.Application}はtview全体を制御します。TUIツールを起動するときは@<code>{ApplicationのRun()}関数を実行します。
-
-@<code>{Pages}は各画面を制御します。
-今回は画面が2つあって、各画面へのフォーカスなどを@<code>{Pages}が行います。
-
+@<code>{Pages}は各画面へのフォーカスなどを行います。
 さらに、@<code>{GUI}に@<list>{gui_methods}の関数を追加します。
 
 //listnum[gui_methods][追加する関数][go]{
@@ -427,12 +422,9 @@ func (g *GUI) SetKeybinding() {
 
 この処理の中で大事になってくるのはグリッドです。グリッドは画面レイアウトを制御するのに使用します。
 今回は画面の左半分にファイル一覧、右半分にプレビュー画面のレイアウトにするので、縦に2つセルを用意します。
-
 @<code>{SetColumns()}は縦に作成するセルの数とセルのサイズを設定します。渡した引数の分だけ縦にセルを作ります。
 渡した値がセルのサイズです。0の場合は余った領域のサイズになります。
-
 たとえば、@<code>{SetColumns(5, 0)}の場合は、次図のように縦1つ目のセルのサイズは5で、右半分のサイズは残りの領域をすべて使います。
-今回は0を2つ渡したので、均等サイズのセルが2つ作られます。
 
 //cmd{
 +-----+----------+
@@ -444,13 +436,14 @@ func (g *GUI) SetKeybinding() {
 +-----+----------+
 //}
 
+今回は0を2つ渡したので、均等サイズのセルが2つ作られます。
+
 @<code>{AddItem()}はまず@<code>{FilePanel}をグリッドに追加します。
 そして第2引数は行、第3引数は列で、どのセルに置くかを設定します。@<code>{FilePanel}は1行1列目のセルに配置するので第2、3引数はともに0です。
 たとえば1行2列目のセルに@<code>{FilePanel}を配置したい場合は第2は0、第3引数は1となります。
 
 次に第3引数は行の、第4引数は列のセルの大きさを設定します。@<code>{FilePanel}は1セルのみを使うので、行と列を1に設定します。
 たとえば、@<code>{FilePanel}を1行2列で配置したい場合は第3引数は1、第4引数は2を設定します。
-
 グリッドに関する説明は文面だけでは理解しづらいので、
 ソースコードを書き換えて動作を確認して見てください。そちらの方が理解しやすいです。
 
@@ -458,7 +451,7 @@ func (g *GUI) SetKeybinding() {
 
 //image[gorilla/tui_files_sample][ファイル一覧の画面][scale=0.9]
 
-==== ファイルのプレビュー画面を作成し中身を表示する
+=== ファイルのプレビュー画面を作成し中身を表示する
 ファイル一覧の画面を出したところで、次はプレビュー画面を作っていきます。
 まず@<code>{preview.go}を作成して、@<list>{about_preview}の構造体と関数を用意します。
 
@@ -506,7 +499,7 @@ func (p *PreviewPanel) UpdateView(name string) {
 @<code>{UpdateView()}は実際ファイルの中身を読み込んで画面に出力します。
 
 プレビュー画面を描画する処理は以上です。次に@<code>{gui.go}に@<list>{add_preview_panel}の追加処理を実装していきます。
-+の部分が追記箇所です。
+@<code>{+}の部分が追記箇所です。
 
 //listnum[add_preview_panel][PreviewPanelの追加と初期化][go]{
  type GUI struct {
@@ -574,10 +567,9 @@ func (p *PreviewPanel) UpdateView(name string) {
 
 === 最後に
 簡易のプレビューTUIツールを作りましたが、まだ改善余地はあります。たとえばプレビュー画面をスクロールできるようにするなどです。
-そこは読者のみなさんへの課題とします。ぜひ取り組んでみてください。
-
-本章で実装したサンプルコードは筆者のリポジトリ@<fn>{sample_tui_repository}に置いてありますので、全体像をつかんで置きたい方はそちらを参考してください。
-
+そこは読者のみなさんへの課題とします。
 こういった小さなツールは作業効率を上げる道具になりますので、ぜひチャレンジしてみてください。
+
+本章で実装したサンプルコードは筆者のリポジトリ@<fn>{sample_tui_repository}に置いてありますので、参考したい方はそちらをみてください。
 
 //footnote[sample_tui_repository][https://github.com/skanehira/shoten8-sample-tui]
