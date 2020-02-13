@@ -19,7 +19,7 @@ TUIがCLIと混同されがちな理由は、おそらくどちらもコマン�
 TUIツールを使う一番のメリットは、直感的でシンプルに操作できるところです。
 
 たとえば、@<img>{gorilla/about_tui_tool}は筆者が作成したdockerを操作できるdocuiというTUIツールですが、
-@<code>{u}でコンテナを起動、@<code>{d}コンテナを削除できます。
+@<code>{u}でコンテナを起動、@<code>{d}でコンテナを削除できます。
 これをCLIで行うと次のコマンドを入力して実行する必要があります。
 
 //cmd{
@@ -76,7 +76,7 @@ lazygitはファイルの差分確認やステージ追加、コミットの差�
 
 //footnote[about_lazygit][https://github.com/jesseduffield/lazygit]
 
-=== JSON
+=== tson
 JSONといえばjq@<fn>{about_jq}というCLIツールが有名です。
 しかし、jqはインタラクティブに値を絞り込みできないので、筆者はJSONをインタラクティブに操作できるtson@<fn>{about_tson}というTUIツールを作りました。
 
@@ -93,7 +93,7 @@ tsonの主な機能は次になります。
 //footnote[about_jq][https://stedolan.github.io/jq/]
 //footnote[about_tson][https://github.com/skanehira/tson]
 
-=== ファイラ
+=== ff
 端末で作業しているとディレクトリの移動やファイルのコピーや削除、中身を確認したりすることが多々あります。
 これらもすべてコマンドで操作する必要があり、ちょっと面倒です。
 
@@ -107,7 +107,7 @@ ffは手軽にディレクトリの移動やファイル、ディレクトリの
 
 == TUIツールを作る
 TUIツールをいくつか紹介したところで、実際に簡単なTUIツールを作ってみましょう。
-今回のTUIツールはファイルのビューアです。ビューアの仕様の次になります。
+今回のTUIツールはファイルのビューアです。ビューアの仕様は次になります。
 
  * カレントディレクトリのファイル一覧画面
  * 選択したファイルの中身をプレビュー画面に表示
@@ -322,7 +322,7 @@ func (f *FilePanel) UpdateView() {
 
 各関数について説明していきます。
 
-@<code>{SetFiles()}は@<code>{Files}で取得したファイル情報を@<code>{FilePanel.files}にセットします。
+@<code>{SetFiles()}は@<code>{Files()}で取得したファイル情報を@<code>{FilePanel.files}にセットします。
 @<code>{NewFilePanel()}でfilesにセットしてもよいですが、役割が異なるので別関数として切り出します。
 @<code>{SelectedFile()}は現在選択しているファイル情報を取得します。@<code>{f.GetSelection()}は現在選択しているテーブルの行と列のインデックスを取得できるのでそれを利用しています。
 
@@ -436,7 +436,7 @@ func (g *GUI) SetKeybinding() {
 +-----+----------+
 //}
 
-今回は0を2つ渡したので、均等サイズのセルが2つ作られます。
+今回は0を2つ渡したので、列の幅が均等サイズのセルが2つ作られます。
 
 @<code>{AddItem()}はまず@<code>{FilePanel}をグリッドに追加します。
 そして第2引数は行、第3引数は列で、どのセルに置くかを設定します。@<code>{FilePanel}は1行1列目のセルに配置するので第2、3引数はともに0です。
