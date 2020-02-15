@@ -87,7 +87,7 @@ Raftでは@<b>{ターム}という時間の分割単位があり、選挙開始�
 
 == Goでシンプルなキーバリューストアを実装する
 
-この節では分散キーバリューストアを実装する前段階&Goの復習も兼ねてシンプルなキーバリューストアを作ってみましょう。シンプルなキーバリューストアの完成形は@<code>{https://github.com/po3rin/kvraft/commit/****}にあります。HTTPリクエストを受けてデータを操作します。図にすると@<img>{kv}のようになります。
+この節では分散キーバリューストアを実装する前段階&Goの復習も兼ねてシンプルなキーバリューストアを作ってみましょう。シンプルなキーバリューストアの完成形は@<code>{https://github.com/po3rin/kvraft/pull/1}にあります。HTTPリクエストを受けてデータを操作します。図にすると@<img>{kv}のようになります。
 
 //image[kv][シンプルなキーバリューストア][scale=0.9]
 
@@ -152,6 +152,8 @@ func (s *Store) Save(key string, value string) error {
 //list[server1][serverパッケージ][go]{
 package server
 
+// ...
+
 type Store interface {
 	Lookup(key string) (string, bool)
 	Save(k string, v string) error
@@ -170,14 +172,16 @@ type Server struct {
 
 //footnote[gin][@<href>{https://github.com/gin-gonic/gin}]
 
-//list[server2][serverパッケージの関数][go]{
-import "github.com/gin-gonic/gin"
+//list[server2][serverパッケージのhandler][go]{
+import (
+	// ...
+	"github.com/gin-gonic/gin"
+)
 
 type Request struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
 }
-
 
 func (h *handler) Get(c *gin.Context) {
 	key := c.Param("key")
@@ -211,7 +215,7 @@ func (h *handler) Put(c *gin.Context) {
 
 今回はGET、PUTメソッドでそれぞれデータの保存、取得を行っています。続いてAPIを立ち上げるメソッドを準備しましょう(@<list>{server.run})。
 
-//list[server.run][mainパッケージの関数][go]{
+//list[server.run][serverパッケージの*Server.Runメソッド][go]{
 import (
 	// ...
 	"golang.org/x/sync/errgroup"
@@ -312,7 +316,7 @@ Raftアルゴリズムをゼロから実装するのはかなり骨の折れる�
 
 == Raftを利用するraftalgパッケージを実装する
 
-ここからのコードの変更は@<code>{https://github.com/po3rin/kvraft/commit/****}に差分が置いてあります。
+ここからのコードの変更は@<code>{https://github.com/po3rin/kvraft/pull/2}に差分が置いてあります。
 
 === 実装方針
 
@@ -321,7 +325,7 @@ Raftアルゴリズムをゼロから実装するのはかなり骨の折れる�
 
 //image[arch][大雑把にraftalgパッケージが行うことの構成図][scale=1]
 
-@<img>{arch}をみて分かるとおりRaftで別のノードと通信する必要があるのでそれらの管理もこのraftalgパッケージの責務です。etcd/raftが本当にRaftアルゴリズムのコアだけに集中して作られたパッケージだということが見て取れます。このraftalgパッケージを使うと先ほどの実装(@<img>{kv})が@<img>{arch2}のように変わります。
+@<img>{arch}をみて分かるとおりRaftで別のノードと通信する必要があるのでそれらの管理もこの@<b>{raftalg}パッケージの責務です。etcd/raftが本当にRaftアルゴリズムのコアだけに集中して作られたパッケージだということが見て取れます。この@<b>{raftalg}パッケージを使うと先ほどの実装(@<img>{kv})が@<img>{arch2}のように変わります。
 
 //image[arch2][storeからraftalgパッケージを利用する][scale=1]
 
@@ -421,7 +425,7 @@ func (r *RaftAlg) Run(ctx context.Context) error {
 }
 //}
 
-そしてクラスターのメンバーのURLをetcd/raftパッケージで使う用の型に変換します(@<list>{peers})。最終的にノードを起動するための関数の引数に渡すためです。
+そしてクラスターのメンバーのURLを@<b>{etcd/raft}パッケージで使う用の型に変換します(@<list>{peers})。最終的にノードを起動するための関数の引数に渡すためです。
 
 //list[peers][peersの型変換][go]{
 func (r *RaftAlg) Run(ctx context.Context) error {
@@ -492,7 +496,8 @@ func (r *RaftAlg) replayWAL(ctx context.Context) (*wal.WAL, error) {
 	_ = r.raftStorage.Append(ents)
 
 	select {
-	case r.doneRestoreLogC <- struct{}{}: // replayの終了を通知
+	// replayの終了を通知する
+	case r.doneRestoreLogC <- struct{}{}:
 	case <-time.After(10 * time.Second):
 		return nil, errors.New(
 			"timeout(10s) receiving done restore channel",
@@ -508,7 +513,7 @@ func (r *RaftAlg) replayWAL(ctx context.Context) (*wal.WAL, error) {
 }
 //}
 
-@<list>{replayWAL}から分かるとおり今回WALはfileで保存しています。WALに保存されたログを取得して、メモリストレージに移します。その後に、WALのreplayを待っているストアにチャネルで終了を通知します。これでノード再起動時などにログを復元できます。ログがメモリストレージに移せたら、キーバリューストアにデータ操作行うメソッドである@<code>{*RaftAlg.publishEntries}をコールします。ちなみにselect文ではreplayの終了を通知するチャネルの送信と同時にタイムアウトとcontextパッケージによる割り込みを可能にしています。タイムアウトに関してはreplayを通知する相手がまだ立ち上がっていないのは何らかの問題があるとして処理を中断する必要があるからです。これから何回か出てくる実装パターンなので覚えておきましょう。
+@<list>{replayWAL}から分かるとおり今回WALはfileで保存しています。WALに保存されたログを取得して、メモリストレージに移します。その後に、WALのreplayを待っているストアにチャネルで終了を通知します。これでノード再起動時などにログを復元できます。ログがメモリストレージに移せたら、キーバリューストアにデータ操作行うメソッドである@<code>{*RaftAlg.publishEntries}をコールします。ちなみにselect文ではreplayの終了を通知するチャネルの送信と同時にタイムアウトと@<b>{context}パッケージによる割り込みを可能にしています。タイムアウトに関してはreplayを通知する相手がまだ立ち上がっていないのは何らかの問題があるとして処理を中断する必要があるからです。これから何回か出てくる実装パターンなので覚えておきましょう。
 
 
 === エントリの配送
@@ -527,7 +532,7 @@ func (r *RaftAlg) publishEntries(
 ) error {
 	for i := range ents {
 		if ents[i].Type != raftpb.EntryNormal ||
-		len(ents[i].Data) == 0 {
+			len(ents[i].Data) == 0 {
 			// EntryNormal 型のエントリのみをサポートする
 			// 他のタイプについては後述
 			continue
@@ -535,7 +540,7 @@ func (r *RaftAlg) publishEntries(
 		s := string(ents[i].Data)
 
 		select {
-		// 適用して良いをエントリをチャネル経由で通知する
+		// 適用して良いエントリをチャネル経由で通知する
 		case r.commitC <- s:
 		case <-time.After(10 * time.Second):
 			return errors.New(
@@ -697,7 +702,7 @@ func (r *RaftAlg) serveChannels(ctx context.Context) error {
 }
 //}
 
-ここではコンテキストキャンセルや、トランスポーターからのエラーを受ける以外に、重要な２つの@<code>{case}を扱っています。１つ目の@<code>{case}は定期的に@<code>{time.Ticker}で実行しなければならない@<code>{raft.Node.Tick}メソッドを実行するケースです。Raftには、ハートビートと選挙タイムアウトの2つの重要なタイムアウトがあると説明しました。etcd/raftパッケージの内部では、時間はTickで抽象化されています。たとえば@<list>{raftalg2}において@<code>{raft.Config.HeartbeatTick}フィールドの値は1に設定しましたが、この数字の単位は何なのかは説明しませんでした。これは@<code>{raft.Node.Tick}メソッドが1回呼び出されるたびにハートビートを送るという意味になっています。2つ目の@<code>{case}は@<code>{raft.Node.Ready}メソッド経由でチャネルを受け取る処理です。これは現在のノードの状態を受け取ります。これにはコミット済みのエントリ(@<code>{raft.Ready.rd.CommittedEntries})も含んでいます。このコミット済みエントリはState Machine（今回の例ではキーバリューストア）に適用できるので、先ほど実装した@<code>{*RaftAlg.publishEntries}に引数として渡してあげます。続いての実装ではraftalgパッケージを利用するパッケージ（今回の例ではstoreパッケージ）がチャネルを直で触らなくてよいようにチャネルをメソッドでラップしてあげます(@<list>{wrapChannel})。このパターンは筆者が勝手に@<b>{method wrap channel}パターンと呼んでいます。標準パッケージの@<code>{context.Done}メソッドなどはまさにこのパターンで実装されており、チャネルを直で触らなくてもよい実装になっています。
+ここではコンテキストキャンセルや、トランスポーターからのエラーを受ける以外に、重要な２つの@<code>{case}を扱っています。１つ目の@<code>{case}は定期的に@<code>{time.Ticker}で実行しなければならない@<code>{raft.Node.Tick}メソッドを実行するケースです。Raftには、ハートビートと選挙タイムアウトの2つの重要なタイムアウトがあると説明しました。@<b>{etcd/raft}パッケージの内部では、時間はTickで抽象化されています。たとえば@<list>{raftalg2}において@<code>{raft.Config.HeartbeatTick}フィールドの値は1に設定しましたが、この数字の単位は何なのかは説明しませんでした。これは@<code>{raft.Node.Tick}メソッドが1回呼び出されるたびにハートビートを送るという意味になっています。2つ目の@<code>{case}は@<code>{raft.Node.Ready}メソッド経由でチャネルを受け取る処理です。これは現在のノードの状態を受け取ります。これにはコミット済みのエントリ(@<code>{raft.Ready.rd.CommittedEntries})も含んでいます。このコミット済みエントリはState Machine（今回の例ではキーバリューストア）に適用できるので、先ほど実装した@<code>{*RaftAlg.publishEntries}に引数として渡してあげます。続いての実装では@<b>{raftalg}パッケージを利用するパッケージ（今回の例では@<b>{store}パッケージ）がチャネルを直で触らなくてよいようにチャネルをメソッドでラップしてあげます(@<list>{wrapChannel})。このパターンは筆者が勝手に@<b>{method wrap channel}パターンと呼んでいます。標準パッケージの@<code>{context.Done}メソッドなどはまさにこのパターンで実装されており、チャネルを直で触らなくてもよい実装になっています。
 
 //list[wrapChannel][チャネルを関数でWrap][go]{
 func (r *RaftAlg) Commit() <-chan string {
@@ -709,7 +714,7 @@ func (r *RaftAlg) DoneReplayWAL() <-chan struct{} {
 }
 //}
 
-raftalgパッケージの最後にstoreパッケージがRaftを利用できるようにメソッドを準備してあげます。@<code>{Propose}メソッドが内部でログのコンセンサスをとってくれます。
+@<b>{raftalg}パッケージの最後に@<b>{store}パッケージがRaftを利用できるようにメソッドを準備してあげます。@<code>{Propose}メソッドが内部でログのコンセンサスをとってくれます。
 
 //list[propose][チャネルを関数でWrap][go]{
 func (r *RaftAlg) Propose(prop []byte) error {
@@ -721,11 +726,11 @@ func (r *RaftAlg) Propose(prop []byte) error {
 }
 //}
 
-@<list>{wrapChannel}において@<code>{raft.Node.Propose}関数の結果は先ほど実装した@<code>{*RaftAlg.serveChannels}が@<code>{raft.Node.Ready}関数で受け取る形になっています。これでraftalgパッケージの実装が完了しました。
+@<list>{wrapChannel}において@<code>{raft.Node.Propose}関数の結果は先ほど実装した@<code>{*RaftAlg.serveChannels}が@<code>{raft.Node.Ready}関数で受け取る形になっています。これで@<b>{raftalg}パッケージの実装が完了しました。
 
 == キーバリューストアをraftalgパッケージでRaftに対応させる
 
-Raftを扱う為のraftalgパッケージができたので、storeパッケージとserverパッケージ、mainパッケージを少し修正して、先ほど作ったキーバリューストアをRaftに対応させます。
+Raftを扱う為の@<b>{raftalg}パッケージができたので、@<b>{store}パッケージを修正して、先ほど作ったキーバリューストアをRaftに対応させます。
 
 === 既存のキーバリューストアの改修
 
@@ -733,7 +738,13 @@ Raftを扱う為のraftalgパッケージができたので、storeパッケー�
 
 コミットしたエントリがチャネル経由で通知されるので、これをgorutineで待ち構えて実際のデータを保存する場所(@<code>{map[string]string})にappendしてあげます。まずは@<code>{Store}構造体にこちらで定義した@<code>{Raft}インターフェースを埋め込むようにします(@<list>{store2})。
 
-//list[store2][serveChannelsの実装][go]{
+//list[store2][storeパッケージの修正][go]{
+type Store struct {
+	mu      sync.RWMutex
+	kvStore map[string]string
+	Raft // 追加
+}
+
 type Raft interface {
 	Propose(prop []byte) error
 	Commit() <-chan string
@@ -743,12 +754,6 @@ type Raft interface {
 type kv struct {
 	Key   string
 	Val string
-}
-
-type Store struct {
-	mu      sync.RWMutex
-	kvStore map[string]string
-	Raft // 追加
 }
 
 func New(raft Raft) *Store {
@@ -783,7 +788,6 @@ func (s *Store) Save(key string, value string) error {
 
 //list[store4][RunCommitReaderの実装][go]{
 func (s *Store) RunCommitReader(ctx context.Context) error {
-
 	// 起動時にWALのreplayを待つ
 	select {
 	case <-s.Raft.DoneReplayWAL():
@@ -791,7 +795,7 @@ func (s *Store) RunCommitReader(ctx context.Context) error {
 		return ctx.Err()
 	case <-time.After(10 * time.Second):
 		return errors.New(
-			"timeout(10s) sending done replay channel",
+			"timeout(10s) receiving done replay channel",
 		)
 	}
 
@@ -829,11 +833,11 @@ import (
 )
 
 func main() {
+	port := flag.Int("port", 3000, "key-value server port")
     cluster := flag.String(
         "cluster", "http://127.0.0.1:9021", "comma separated cluster peers",
     )
     id := flag.Int("id", 1, "node ID")
-    port := flag.Int("port", 9121, "key-value server port")
     flag.Parse()
 
     ra := raftalg.New(*id, strings.Split(*cluster, ","))
@@ -972,6 +976,7 @@ clusterのノードすべてにデータが正しく保存されていること�
 
 //list[try5][Raftアルゴリズムが正しく動いていることを確認②][go]{
 # kvraft2を止める
+# Graceful Shutdownで少し時間かかる
 $ goreman run stop kvraft2
 
 $ curl -X PUT localhost:12380 -d '{"key": "hello", "value": "golang"}'
@@ -989,11 +994,11 @@ $ curl -X GET localhost:22380/hello
 $ rm -r ./kvraft-*
 //}
 
-kvraft2がdownしていた時に更新が入ったのにもかかわらず、kvraft2のノードのストアのデータも正しく更新されています。Raftで正しく分散システムが構築できています。また今回のパッケージの切り方に注目してください。etcd/raftパッケージの利用はraftalgパッケージのみに閉じ込めることに成功しており、storeパッケージに関しては標準パッケージ以外に依存していません。もちろんserverパッケージもstoreパッケージに依存していないのでテストやstoreなどの実装の差し替えも容易になっています。
+kvraft2がdownしていた時に更新が入ったのにもかかわらず、kvraft2のノードのストアのデータも正しく更新されています。Raftで正しく分散システムが構築できています。また今回のパッケージの切り方に注目してください。@<b>{etcd/raft}パッケージの利用は@<b>{raftalg}パッケージのみに閉じ込めることに成功しており、@<b>{store}パッケージに関しては標準パッケージ以外に依存していません。もちろん@<b>{server}パッケージも@<b>{store}パッケージに依存していないのでテストやstoreなどの実装の差し替えも容易になっています。
 
 == クラスターの動的な構成変更
 
-今までの実装ではクラスターのノードを起動時に固定しなければなりません。たとえば、運用中にノード数を3から5にしたい時は、またクラスターごと再起動しなければいけません。これでは困るので動的にクラスターのノード数を変更できるようにしてあげましょう。ここからのコードの変更は@<code>{https://github.com/po3rin/kvraft/commit/****}に差分が置いてあります。
+今までの実装ではクラスターのノードを起動時に固定しなければなりません。たとえば、運用中にノード数を3から5にしたい時は、またクラスターごと再起動しなければいけません。これでは困るので動的にクラスターのノード数を変更できるようにしてあげましょう。ここからのコードの変更は@<code>{https://github.com/po3rin/kvraft/pull/3}に差分が置いてあります。
 
 === キーバリューストアを動的な構成変更に対応させる
 
@@ -1034,7 +1039,7 @@ func (r *RaftAlg) Run(ctx context.Context, join bool) error {
 }
 //}
 
-これでjoinが渡ったときにRestatとして起動するようになりました。あとはクラスターの設定を変えられるようにする必要があります。これはraft/etcdパッケージによって提供される@<code>{raft.RaftNode.ProposeConfChange}が担います。これに適切な命令を構造体として渡してあげるようにすればクラスターの設定（ノード数など）を変えてくれます@<list>{ChangeConf}。
+これでjoinが渡ったときにRestatとして起動するようになりました。あとはクラスターの設定を変えられるようにする必要があります。これは@<b>{raft/etcd}パッケージによって提供される@<code>{raft.RaftNode.ProposeConfChange}が担います。これに適切な命令を構造体として渡してあげるようにすればクラスターの設定（ノード数など）を変えてくれます@<list>{ChangeConf}。
 
 //list[ChangeConf][ChangeConfメソッドの追加][go]{
 func (r *RaftAlg) ChangeConf(op string, nodeID uint64, url string) error {
@@ -1061,7 +1066,7 @@ func (r *RaftAlg) ChangeConf(op string, nodeID uint64, url string) error {
 }
 //}
 
-@<list>{ChangeConf}ではとりあえずノードの追加と削除をサポートしました。この関数をAPIからstoreパッケージ経由でコールできるようにすれば良さそうです。@<code>{raft.RaftNode.ProposeConfChange}の結果はチャネル経由で@<code>{[]raftpb.Entry}型として受け取れます。そのため@<code>{[]raftpb.Entry}を処理している@<code>{*RaftAlg.publishEntries}メソッドも全面的に修正してあげます(@<list>{publishEntries})。少しエラーハンドリングが多いので省略しています。
+@<list>{ChangeConf}ではとりあえずノードの追加と削除をサポートしました。この関数をAPIから@<b>{store}パッケージ経由でコールできるようにすれば良さそうです。@<code>{raft.RaftNode.ProposeConfChange}の結果はチャネル経由で@<code>{[]raftpb.Entry}型として受け取れます。そのため@<code>{[]raftpb.Entry}を処理している@<code>{*RaftAlg.publishEntries}メソッドも全面的に修正してあげます(@<list>{publishEntries})。少しエラーハンドリングが多いので省略しています。
 
 //list[publishEntries][publishEntriesの修正][go]{
 func (r *RaftAlg) publishEntries(
@@ -1116,7 +1121,7 @@ func (r *RaftAlg) publishEntries(
 }
 //}
 
-これでraftalgパッケージの修正が終わりました。続いてstoreパッケージを修正します。具体的には@<code>{*RaftAlg.ChangeConf}をcallするようにします(@<list>{store5})。
+これで@<b>{raftalg}パッケージの修正が終わりました。続いて@<b>{store}パッケージを修正します。具体的には@<code>{*RaftAlg.ChangeConf}をcallするようにします(@<list>{store5})。
 
 //list[store5][storeパッケージの修正][go]{
 type Raft interface {
@@ -1132,7 +1137,7 @@ func (s *Store) Conf(op string, id uint64, url string) error {
 }
 //}
 
-続いてAPIでクラスタの設定を変更するエンドポイントを追加してあげます@<list>{server3}。
+続いて@<code>{server}パッケージでクラスタの設定を変更するエンドポイントを追加してあげます(@<list>{server3})。
 
 //list[server3][serverパッケージの修正①][go]{
 type Store interface {
@@ -1218,7 +1223,7 @@ func (h *handler) Delete(c *gin.Context) {
 動作確認をしましょう。まずは先ほどと同様にクラスターを3ノードで立ち上げます@<list>{try6}。
 
 //list[try6][クラスター立ち上げ][go]{
-$ goreman -logtime=false start
+$ goreman -logtime=false start | grep Raft-debug
 //}
 
 続いてノードの追加要求を行います。
