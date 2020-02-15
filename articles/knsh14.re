@@ -114,8 +114,8 @@ if err := tpl.Execute(os.Stdout, v); err != nil {
 
 withcheckは大きく2つのステップに別れます。
 
-1. with句の条件部分に指定されている変数を探し出す。
-2. 指定された変数が、with句が@<code>{true}になった場合のテンプレートで使われているか探し出す。
+ 1. with句の条件部分に指定されている変数を探し出す。
+ 2. 指定された変数が、with句が@<code>{true}になった場合のテンプレートで使われているか探し出す。
 
 === チェックの結果の返し方
 with句でチェックした変数が@<code>{nil}でない場合にその変数が正しく使われているかチェックすることはできました。
@@ -127,7 +127,7 @@ withcheckでは@<code>{error}型で返すようにしました。
 
 本章を執筆している時点ではまだ単にエラーを返すだけですが、今後改修していく予定です。
 
-=== With句の抽象構文木
+=== with句の抽象構文木
 
 text/templateの@<code>{template.Template}型は内部にテンプレートの抽象構文木を持っています。
 templateの抽象構文木のノードはtext/template/parseパッケージ内@<fn>{parse_package_link}で定義されています。
