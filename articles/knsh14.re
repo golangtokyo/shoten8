@@ -1,25 +1,26 @@
 = templateのlintツールを作ろう
 
 Goは標準パッケージでテンプレート機能をサポートしています。
-テンプレート機能とは、出力形式をあらかじめ定義しておき、出力時に定義された形式にしたがって出力を組み立てる機能です。
+テンプレート機能とは、出力形式をあらかじめ定義しておき、出力時に定義された形式にしたがって文字列を出力する機能です。
 
 テンプレート機能はWebサービスやコード生成などさまざまな場面で利用されています。
 @<code>{go list}コマンドでも結果を出力する際にテンプレート機能を利用することで、利用者が出力結果を自由に変更できます。
 
 Goのテンプレート機能はブロックの定義や、自作関数の適用など複雑なテンプレートも作成できます。
 テンプレートで複雑な処理を行うと実行した時にどのような形式になるか予測しづらくなります。
-テンプレートによる出力を実行する前に、ミスがないかチェックする必要があります。
+テンプレートによる出力を実行する前に、ミスをしていないかチェックする必要があります。
 
 本章ではテンプレートの中でwith式を使った時にその変数が使われているかをチェックするツール@<tt>{withcheck}を作ります。
-加えて、text/templateパッケージ内ではどのようにテンプレートの解析処理が行われているのかを説明します。
+#@# 加えて、text/templateパッケージ内ではどのようにテンプレートの解析処理が行われているのかを説明します。
 
 == チェックツールの概要
 text/templateパッケージのテンプレートではwith句@<fn>{link_actions}という構文があります。
 これは引数の変数がnilではない場合に@<code>{true}になる条件分岐の構文です。
+さらにwith句の中ではスコープが変化し、with句でチェックした要素を内部ではドットになります。
 
 //footnote[link_actions][@<href>{https://golang.org/pkg/text/template/#hdr-Actions}]
 
-この構文が@<code>{true}になる場合、その変数を利用していなければ意味がない条件になります。
+この構文が@<code>{true}になる場合、その変数を内部で利用していなければ意味がない条件になります。
 意味のない条件を防ぐためにテンプレートをチェックし実行する前にエラーを出します。
 
 具体的な例を用いて説明します。
@@ -40,9 +41,14 @@ type Person struct {
 }
 
 const (
-  goodTpl = `hello, {{ with .Name }}my name is {{ .Name }}{{ else }}, nice to meet you{{ end }}.`
-  badTpl  = `hello, {{ with .Name }}I am {{ .Bar }} years old{{ else }}, nice to meet you{{ end }}.`
+  goodTpl = `hello,{{ with .Name }}my name is {{.}}{{ end }}.`
+  badTpl  = `hello, {{ with .Name }}world{{ end }}.`
 )
+
+func main() {
+  Good()
+  Bad()
+}
 
 func Good() {
   v := Person{
@@ -76,7 +82,7 @@ func Bad() {
 //}
 
 Goodの場合ではwith句でチェックした@<code>{Name}変数があれば、それを出力しています。
-Badの場合ではwith句で@<code>{Name}変数をチェックしたにもかかわらず、@<code>{Age}変数を出力しています。
+Badの場合ではwith句で@<code>{Name}変数をチェックしたにもかかわらず、その変数を使っていません。
 Badのようなテンプレートの場合警告が出るようにチェックします。
 
 テンプレートの静的解析は、Goコードの静的解析のように実行する前に別のツールとして実行するのはたいへんです。
@@ -85,7 +91,7 @@ Badのようなテンプレートの場合警告が出るようにチェック�
 @<list>{example_withcheck_execute}のように@<code>{template.Execute}関数を実行する前にチェックします。
 
 //list[example_withcheck_execute][withcheckの実行例][go]{
-input := `{{ with .Foo}}{{.Bar}}{{end}}`
+input := `{{ with .Foo}}{{end}}`
 tpl, err := template.New("test").Parse(input)
 if err != nil {
   log.Fatal(err)
@@ -111,6 +117,16 @@ withcheckは大きく2つのステップに別れます。
 1. with句の条件部分に指定されている変数を探し出す。
 2. 指定された変数が、with句が@<code>{true}になった場合のテンプレートで使われているか探し出す。
 
+=== チェックの結果の返し方
+with句でチェックした変数が@<code>{nil}でない場合にその変数が正しく使われているかチェックすることはできました。
+最後にその結果をわかりやすく返す必要があります。
+
+withcheckでは@<code>{error}型で返すようにしました。
+なぜなら、@<code>{bool}型を使うよりも@<code>{error}型を利用することで失敗時の情報をより多く返すことができます。
+自分たちで定義したエラーの型を使うことで利用者が、どこで失敗したか判別しやすくなります。
+
+本章を執筆している時点ではまだ単にエラーを返すだけですが、今後改修していく予定です。
+
 === With句の抽象構文木
 
 text/templateの@<code>{template.Template}型は内部にテンプレートの抽象構文木を持っています。
@@ -132,7 +148,6 @@ with句の条件部分に記述できる形式を@<list>{example_with_statements
 //listnum[example_with_statements][with句の条件式の例]{
 {{ with .Foo }}
 {{ with . }}
-{{ with .Foo .Bar }}
 {{ with $x = 123 }}
 {{ with $x := getFoo }}
 {{ with $x := "huga" | println }}
@@ -141,14 +156,33 @@ with句の条件部分に記述できる形式を@<list>{example_with_statements
 チェックする変数は@<code>{parse.WithNode}型の条件式部分を表現している@<code>{Pipe}フィールドから取り出します。
 @<code>{Pipe}フィールドは@<code>{parse.PipeNode}型です。
 @<code>{parse.PipeNode}型には@<code>{[]*parse.VariableNode}型の@<code>{Decl}フィールドと、@<code>{[]*parse.CommandNode}型の@<code>{Cmds}フィールドがあります。
-@<list>{example_with_statements}の4〜6行目は@<code>{Decl}フィールドで確認できます。
-1〜3行目は@<code>{Cmds}フィールドから確認できます。
-@<code>{*parse.CommandNode}型のスライスですので、ループでチェックしていきます。
+
+@<list>{example_with_statements}の1〜2行目は@<code>{Cmds}フィールドから確認できます。
+@<code>{Cmds}フィールドは@<code>{*parse.CommandNode}型のスライスです。
+フィールドを複数記述した場合、最初の要素はメソッドとして扱われます。
+このような場合は不適切な形式ですので、本章では無視します。
+
 @<code>{*parse.CommandNode}型の引数を表す@<code>{Args}フィールドには、さまざまな種類のノードが入る可能性があります。
-しかし実際にチェックする必要があるのは、@<code>{*parse.FieldNode}型か@<code>{*parse.DotNode}型のみです。
-@<code>{*parse.DotNode}型はバリエーションがないため、シンプルです。
-@<code>{*parse.FieldNode}型は@<code>{.X.Y.Z}のような要素の各フィールド名がスライスになっています。
-このスライスをドットでつなぐことで要素名として復元します。
+その中でも@<code>{*parse.FieldNode}型もしくは@<code>{*parse.DotNode}型の２種類をチェックすれば必要な条件を探せます。
+要素のフィールド名の場合はスコープが変化して@<code>{.}として扱われます。
+なので検索する要素は@<code>{.}になります。
+
+3行目から5行目のパターンは@<code>{Decl}フィールドから取り出します。
+@<code>{Decl}フィールドは@<code>{*parse.VariableNode}のスライスです。
+@<code>{Decl}フィールドも、@<code>{Cmds}フィールドのように複数指定できません。
+そのため、@<code>{Decl}フィールドも最初の要素を返すようにします。
+
+with句で変数を定義した場合、ブロックの中では@<list>{example_with_variable_patterns}のように2種類の変数を利用できます。
+どちらも@<tt>{foo}と表示されます。
+
+//list[example_with_variable_patterns][with句のブロックで変数を使うパターン]{
+{{ with $x = "foo" }}{{ $x }}{{end}}
+{{ with $x = "foo" }}{{ . }}{{end}}
+//}
+
+このパターンを考慮する必要があります。
+そのため、@<code>{*parse.VariableNode}から変数を取得する場合は変数名とドットの2つを候補とします。
+
 
 === 変数が使われているかをチェックする
 変数が実際に使われているかは@<code>{parse.WithNode}型の@<code>{List}フィールドをチェックします。
@@ -165,18 +199,7 @@ with句の条件部分に記述できる形式を@<list>{example_with_statements
 なぜなら、対象の変数の中のフィールドを使う可能性があるからです。
 
 他の要素としては@<code>{*parse.DotNode}があります。
-これはドットだけの特別なノードです。
 このノードの場合は完全に同じかチェックします。
-
-=== 結果を返す
-with句でチェックした変数が@<code>{nil}でない場合にその変数が正しく使われているかチェックすることはできました。
-最後にその結果をわかりやすく返す必要があります。
-
-withcheckでは@<code>{error}型で返すようにしました。
-なぜなら、@<code>{bool}型を使うよりも@<code>{error}型を利用することで失敗時の情報をより多く返すことができます。
-どの変数が見つからなくて失敗しているかまで返すことができるため、よりハンドリングしやすくなります。
-
-本章を執筆している時点ではまだ単にエラーを返すだけですが、今後改修していく予定です。
 
 == 最後に
 本章ではtext/templateパッケージで生成したテンプレートを静的解析し、with句でチェックした変数が使われているかを確認するlintツールを作成しました。
