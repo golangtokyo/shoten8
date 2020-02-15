@@ -1249,11 +1249,13 @@ curl -X DELETE localhost:12380 \
     -d '{"id": "4", "url": "http://127.0.0.1:42379"}'
 //}
 
-これでクラスターの動的な設定変更機能が完成しました。
+これでクラスターの動的な設定変更機能が完成しました。さらなる応用として、etcdはv3.4からRaftに4つ目のロールである@<b>{learner（学習者）}@<fn>{learner}を実装しています。これはノードの新規追加時にリーダーのログに追いつくまで非投票メンバーとしてクラスターに参加させるというアイデアです。この方法はログ複製でリーダーが過負荷になるのを防ぎ、クラスター再構成の安全性を高めます。詳しくはetcdのドキュメントをご覧ください@<fn>{learner}
+
+//footnote[learner][@<href>{https://github.com/etcd-io/etcd/blob/master/Documentation/learning/design-learner.md}]
 
 == Next Step
 
-誌面の都合上、具体的な実装は紹介しませんが、よりイカした実装にするためにはRaft論文にも紹介されている@<b>{Log compaction}をサポートする必要があります。Raftのログは際限なく大きくなっていくので、メモリを食い、replayに多くの時間がかかるなどのいろいろな問題が発生します。そのため、ログに蓄積された不要な情報を破棄する何らかのメカニズムが必要です。Raftではある一定の状態のスナップショットを取得して、それ以前のエントリを破棄することで問題を解決しています。スナップショットの機構を正しく動作させるためのRPCである@<b>{InstallSnapshot RPC}も定義されているので、もしよければ読んで見てください。当然、etcd/raftにもスナップショットの機能があり、使い方もetcd/raftのexample@<fn>{raftexample}に実装があるのでこれを参考にするとよいでしょう。
+誌面の都合上、具体的な実装は紹介しませんが、Next StepとしてRaft論文にも紹介されている@<b>{Log compaction}をサポートする必要があります。Raftのログは際限なく大きくなっていくので、メモリを食い、replayに多くの時間がかかるなどのいろいろな問題が発生します。そのため、ログに蓄積された不要な情報を破棄する何らかのメカニズムが必要です。Raftではある一定の状態のスナップショットを取得して、それ以前のエントリを破棄することで問題を解決しています。スナップショットの機構を正しく動作させるためのRPCである@<b>{InstallSnapshot RPC}も定義されているので、もしよければ読んで見てください。当然、etcd/raftにもスナップショットの機能があり、使い方もetcd/raftのexample@<fn>{raftexample}に実装があるのでこれを参考にするとよいでしょう。
 
 //footnote[raftexample][@<href>{https://github.com/etcd-io/etcd/tree/master/contrib/raftexample}]
 
