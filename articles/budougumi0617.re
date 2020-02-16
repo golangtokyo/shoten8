@@ -40,8 +40,16 @@ SOLIDの原則は次の用語リストに挙げた5つのソフトウェア設�
 
 == Goとオブジェクト指向プログラミング
 本題へ入る前に、Goとオブジェクト指向プログラミングの関係を考えてみます。
+そもそもオブジェクト指向に準拠したプログラミング言語であることの条件とは何でしょうか？
+さまざまな主張はありますが、本章では次の3大要素を備えることが「オブジェクト指向に準拠したプログラミング言語であること」とします。
+
+ 1. カプセル化（@<tt>{Encapsulation}）
+ 2. 多態性（ポリモーフィズム）（@<tt>{Polymorphism}）
+ 3. 継承（@<tt>{Inheritance})
+
+
 #@# textlint-disable
-Go公式サイトには@<kw>{Frequently Asked Questions (FAQ)}@<fn>{q_and_a}という「よくある質問の答え」ページがあります。
+Go公式サイトには@<kw>{Frequently Asked Questions (FAQ)}@<fn>{q_and_a}という「よくある質問と答え」ページがあります。
 この中の@<i>{Is Go an object-oriented language?}（Goはオブジェクト指向言語ですか？）という質問で、公式見解が述べられています。
 #@# textlint-enable
 
@@ -53,8 +61,15 @@ Also, the lack of a type hierarchy makes “objects” in Go feel much more ligh
 
 //footnote[q_and_a][@<href>{https://golang.org/doc/faq#Is_Go_an_object-oriented_language}]
 
+非常に曖昧な回答にはなっていますが、Goはオブジェクト指向の3大要素を一部しか取り入れていないため、このような回答になっています。
+オブジェクト指向言語に期待されるで仕組みの1つとして、クラスの階層構造による継承があります。
+Goはそのような継承の仕組みを言語仕様としてサポートしていません。
+埋込み型による疑似継承のアプローチもありますが、これは多態性や共変性、反変性を満たないのでオブジェクト指向で期待される「継承」ではありません。
 
 
+コラムとしてEffectiveJavaの話をするか。
+
+筆者が所持しているEffective Javaは第2版ですが、2018年にJava9対応の第3版が発売されています。
 
 #@# textlint-disable
 雑メモの塊なので静的解析対象外。
