@@ -129,12 +129,14 @@ withcheckでは@<code>{error}型で返すようにしました。
 
 === with句の抽象構文木
 
-text/templateの@<code>{template.Template}型は内部にテンプレートの抽象構文木を持っています。
+text/templateパッケージの@<code>{template.Template}型は内部にテンプレートの抽象構文木を持っています。
 templateの抽象構文木のノードはtext/template/parseパッケージ内@<fn>{parse_package_link}で定義されています。
 
-with句は@<code>{text/template/parse.WithNode}@<fn>{withnode_document_link}という型で表されます。
+with句は@<code>{parse.WithNode}@<fn>{withnode_document_link}という型で表されます。
 @<code>{WithNode}は@<code>{BranchNode}@<fn>{branchnode_document_link}という型を埋め込んでいます。
 @<code>{BranchNode}は条件分岐のための汎用的なノードです。
+
+他にも@<code>{BranchNode}を埋め込んでいる型として、@<code>{IfNode}や@<code>{RangeNode}があります。
 
 //footnote[parse_package_link][@<href>{https://golang.org/pkg/text/template/parse/}]
 //footnote[withnode_document_link][@<href>{https://golang.org/pkg/text/template/parse/#WithNode}]
