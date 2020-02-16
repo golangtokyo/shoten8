@@ -192,7 +192,7 @@ with句で変数を定義した場合、ブロックの中では@<list>{example_
 
 このノードを再帰的にチェックして入力された変数名が実際に使われているか調べます。
 関数やパイプラインの引数をそれぞれチェックするのではなく、その引数のノードの型をチェックし、その中身をチェックします。
-対象となるのは@<code>{*parse.FieldNode}や@<code>{*parse.IdentifierNode}などです。
+対象となるのは@<code>{*parse.FieldNode}型や@<code>{*parse.IdentifierNode}型などです。
 それぞれの型によって比較する方法が異なります。
 
 @<code>{*parse.FieldNode}や@<code>{*parse.VariableNode}、@<code>{*parse.ChainNode}は要素名がスライスになっているので、ドットでつなげてひとつにします。
