@@ -110,7 +110,7 @@ if err := tpl.Execute(os.Stdout, v); err != nil {
 このチェックツールをwithcheckとしてGitHub@<fn>{withcheck_github_link}に公開しています。
 実際のコードを試してみたい方は参照してください。
 
-実際にチェックするコードにすると@<list>{implementation_check_function}@<fn>{link_check_function}の実装になります。
+実際にチェックするコードを@<list>{implementation_check_function}@<fn>{link_check_function}に示します。
 
 //list[implementation_check_function][Check関数の実装]{
 func Check(tmpl *template.Template) error {
