@@ -11,7 +11,7 @@
 
 == @<kw>{SOLIDの原則}（@<tti>{the SOLID principles}）
 SOLIDの原則は次の用語リストに挙げた5つのソフトウェア設計の原則の頭文字をまとめたものです。
-これらの原則は、ソフトウェアをより理解しやすく、より柔軟でメンテナンス性の高いものにするために考案されました。
+これらの原則は、ソフトウェアをより理解しやすく、より柔軟でメンテナンス性の高いものにするために@<i>{Robert C. Martin}によって考案されました。
 書籍としては、「アジャイルソフトウェア開発の奥義」@<fn>{amzn_agile}でまとめられたのが最初です。
 
 //footnote[amzn_agile][@<href>{https://www.amazon.co.jp/dp/4797347783}]
@@ -39,11 +39,11 @@ SOLIDの原則は次の用語リストに挙げた5つのソフトウェア設�
 //footnote[agile_dip][アジャイルソフトウェア開発の奥義 第2版 11.1より]
 
 == Goとオブジェクト指向プログラミング
-本題に入る前に、Goとオブジェクト指向プログラミングの関係について考えてみます。
+本題に入る前に、Goとオブジェクト指向プログラミングの関係を考えてみます。
 #@# textlint-disable
 Go公式サイトには@<kw>{Frequently Asked Questions (FAQ)}@<fn>{q_and_a}という「よくある質問の答え」ページがあります。
+この中の@<i>{Is Go an object-oriented language?}（Goはオブジェクト指向言語ですか？）という質問で、公式見解が述べられています。
 #@# textlint-enable
-この中に@<i>{Is Go an object-oriented language?}（Goはオブジェクト指向言語ですか？）という質問に対する公式見解が述べられています。
 
 //quote{
 Yes and no. Although Go has types and methods and allows an object-oriented style of programming, there is no type hierarchy. The concept of “interface” in Go provides a different approach that we believe is easy to use and in some ways more general. There are also ways to embed types in other types to provide something analogous—but not identical—to subclassing. Moreover, methods in Go are more general than in C++ or Java: they can be defined for any sort of data, even built-in types such as plain, “unboxed” integers. They are not restricted to structs (classes).
