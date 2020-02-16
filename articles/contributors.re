@@ -4,17 +4,17 @@
 == @<chap>{budougumi0617} 何か書く / @<tt>{@budougumi0617}
 食べるほうのグミだよ〜。
 
-== @<chap>{hajimehoshi} Go本体にコントリビュートする方法 / @<tt>{@hajimehoshi}
-ソフトウェアエンジニア。Goでゲームライブラリを作っている。最近白髪が増えた。
+#@# == @<chap>{hajimehoshi} Go本体にコントリビュートする方法 / @<tt>{@hajimehoshi}
+#@# ソフトウェアエンジニア。Goでゲームライブラリを作っている。最近白髪が増えた。
 
-== @<chap>{gorilla} TUIツールを作ろう / @<tt>{@gorilla0513}
-ゴリラです。
+#@# == @<chap>{gorilla} TUIツールを作ろう / @<tt>{@gorilla0513}
+#@# ゴリラです。
 
-== @<chap>{po3rin} GoとコンセンサスアルゴリズムRaftによる分散システム構築入門 / @<tt>{@po3rin}
-主にGoを書いています。
+#@# == @<chap>{po3rin} GoとコンセンサスアルゴリズムRaftによる分散システム構築入門 / @<tt>{@po3rin}
+#@# 主にGoを書いています。
 
-== @<chap>{kaneshin} Goにおける初期化処理 / @<tt>{@kaneshin0120}
-株式会社エウレカで取締役CTOしています。Pairsの技術戦略やエンジニアリングマネジメントについて策定や執行をしています。Go言語やC言語が好きですが数学の最適化理論が大好きです。
+#@# == @<chap>{kaneshin} Goにおける初期化処理 / @<tt>{@kaneshin0120}
+#@# 株式会社エウレカで取締役CTOしています。Pairsの技術戦略やエンジニアリングマネジメントについて策定や執行をしています。Go言語やC言語が好きですが数学の最適化理論が大好きです。
 
 == 表紙・裏表紙 / @<tt>{@tottie_designer}
 Designer, Illustrator.
