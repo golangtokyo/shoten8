@@ -110,41 +110,90 @@ if err := tpl.Execute(os.Stdout, v); err != nil {
 このチェックツールをwithcheckとしてGitHub@<fn>{withcheck_github_link}に公開しています。
 実際のコードを試してみたい方は参照してください。
 
-//footnote[withcheck_github_link][@<href>{https://github.com/knsh14/withcheck}]
+実際にチェックするコードにすると@<list>{implementation_check_function}@<fn>{link_check_function}の実装になります。
 
-withcheckは大きく2つのステップに別れます。
+//list[implementation_check_function][Check関数の実装]{
+func Check(tmpl *template.Template) error {
+  var err error
+  templateutil.Inspect(tmpl.Tree.Root, func(node parse.Node) bool {
+    if err != nil {
+      return false
+    }
+    if n, ok := node.(*parse.WithNode); ok {
+      v, e := getVariable(n.Pipe)
+      if err != nil {
+        err = e
+        return false
+      }
+      e = checkVariable(n.List, v)
+      if e != nil {
+        err = e
+      }
+      return false
+    }
+    return true
+  })
+  return err
+}
+//}
+
+//footnote[withcheck_github_link][@<href>{https://github.com/knsh14/withcheck}]
+//footnote[link_check_function][@<href>{https://github.com/knsh14/withcheck/blob/master/check.go#L22-L43}]
+
+withcheckはwith句に対して処理をします。
+そのため、まずはwith句を探し出します。
+その中で変数が使われているかをチェックします。
+変数が使われているかのチェックは大きく2つのステップに別れます。
 
  1. with句の条件部分に指定されている変数を探し出す。
  2. 指定された変数が、with句が@<code>{true}になった場合のテンプレートで使われているか探し出す。
 
-=== チェックの結果の返し方
-with句でチェックした変数が@<code>{nil}でない場合にその変数が正しく使われているかチェックすることはできました。
-最後にその結果をわかりやすく返す必要があります。
-
-withcheckでは@<code>{error}型で返すようにしました。
-なぜなら、@<code>{bool}型を使うよりも@<code>{error}型を利用することで失敗時の情報をより多く返すことができます。
-自分たちで定義したエラーの型を使うことで利用者が、どこで失敗したか判別しやすくなります。
-
-本章を執筆している時点ではまだ単にエラーを返すだけですが、今後改修していく予定です。
+それぞれを@<code>{getVariable}、@<code>{checkVariable}関数として実装します。
 
 === with句の抽象構文木
 
 text/templateパッケージの@<code>{template.Template}型は内部にテンプレートの抽象構文木を持っています。
 templateの抽象構文木のノードはtext/template/parseパッケージ内@<fn>{parse_package_link}で定義されています。
 
-with句は@<code>{parse.WithNode}@<fn>{withnode_document_link}という型で表されます。
-@<code>{WithNode}は@<code>{BranchNode}@<fn>{branchnode_document_link}という型を埋め込んでいます。
-@<code>{BranchNode}は条件分岐のための汎用的なノードです。
+with句は@<code>{parse.WithNode}@<fn>{withnode_document_link}型という型で表されます。
+@<code>{WithNode}型は@<code>{BranchNode}@<fn>{branchnode_document_link}型という型を埋め込んでいます。
+@<code>{BranchNode}型は条件分岐のための汎用的なノードです。
 
-他にも@<code>{BranchNode}を埋め込んでいる型として、@<code>{IfNode}や@<code>{RangeNode}があります。
+他にも@<code>{BranchNode}型を埋め込んでいる型として、@<code>{IfNode}型や@<code>{RangeNode}型があります。
 
 //footnote[parse_package_link][@<href>{https://golang.org/pkg/text/template/parse/}]
 //footnote[withnode_document_link][@<href>{https://golang.org/pkg/text/template/parse/#WithNode}]
 //footnote[branchnode_document_link][@<href>{https://golang.org/pkg/text/template/parse/#BranchNode}]
 
 === with句でチェックする変数を探す
-
 最初のステップとしてチェック対象の変数を探し出します。
+実際の処理を@<list>{implementation_get_variable}に示します。
+
+//list[implementation_get_variable][チェック対象の変数を取得する処理の実装]{
+func getVariable(n *parse.PipeNode) ([]string, error) {
+  if len(n.Decl) > 0 {
+    if len(n.Decl) > 1 {
+      return nil, ErrTooManyVariables
+    }
+    return []string{n.Decl[0].Ident[0], "."}, nil
+  }
+  if len(n.Cmds) > 0 {
+    args := n.Cmds[0].Args
+    if len(args) > 1 {
+      return nil, ErrTooManyVariables
+    }
+    if _, ok := args[0].(*parse.FieldNode); ok {
+      return []string{"."}, nil
+    }
+    if _, ok := args[0].(*parse.DotNode); ok {
+      return []string{"."}, nil
+    }
+    return nil, ErrInvalid
+  }
+  return nil, ErrNotFound
+}
+//}
+
 with句の条件部分に記述できる形式を@<list>{example_with_statements}に示します。
 
 //listnum[example_with_statements][with句の条件式の例]{
@@ -170,7 +219,7 @@ with句の条件部分に記述できる形式を@<list>{example_with_statements
 なので検索する要素は@<code>{.}になります。
 
 3行目から5行目のパターンは@<code>{Decl}フィールドから取り出します。
-@<code>{Decl}フィールドは@<code>{*parse.VariableNode}のスライスです。
+@<code>{Decl}フィールドは@<code>{*parse.VariableNode}型のスライスです。
 @<code>{Decl}フィールドも、@<code>{Cmds}フィールドのように複数指定できません。
 そのため、@<code>{Decl}フィールドも最初の要素を返すようにします。
 
@@ -183,25 +232,72 @@ with句で変数を定義した場合、ブロックの中では@<list>{example_
 //}
 
 このパターンを考慮する必要があります。
-そのため、@<code>{*parse.VariableNode}から変数を取得する場合は変数名とドットの2つを候補とします。
-
+そのため、@<code>{*parse.VariableNode}型から変数を取得する場合は変数名とドットの2つを候補とします。
 
 === 変数が使われているかをチェックする
 変数が実際に使われているかは@<code>{parse.WithNode}型の@<code>{List}フィールドをチェックします。
 @<code>{List}フィールドは@<code>{*parse.ListNode}型で@<code>{parse.WithNode}型の@<code>{Pipe}フィールドが正の場合に実行されるノードです。
 
 このノードを再帰的にチェックして入力された変数名が実際に使われているか調べます。
+実装は
 関数やパイプラインの引数をそれぞれチェックするのではなく、その引数のノードの型をチェックし、その中身をチェックします。
 対象となるのは@<code>{*parse.FieldNode}型や@<code>{*parse.IdentifierNode}型などです。
 それぞれの型によって比較する方法が異なります。
 
-@<code>{*parse.FieldNode}や@<code>{*parse.VariableNode}、@<code>{*parse.ChainNode}は要素名がスライスになっているので、ドットでつなげてひとつにします。
-@<code>{*parse.IdentifierNode}はそのまま使います。
+実装を@<list>{implementation_check_variable}@<fn>{link_check_variable}に示します。
+
+//list[implementation_check_variable][変数が使われているかチェックする関数の実装]{
+func checkVariable(list *parse.ListNode, variables []string) error {
+  var found bool
+  for _, target := range variables {
+    templateutil.Inspect(list, func(node parse.Node) bool {
+      f := false
+      switch n := node.(type) {
+      case *parse.FieldNode:
+        v := "." + strings.Join(n.Ident, ".")
+        f = strings.HasPrefix(v, target)
+      case *parse.IdentifierNode:
+        f = strings.HasPrefix(n.Ident, target)
+      case *parse.VariableNode:
+        v := strings.Join(n.Ident, ".")
+        f = strings.HasPrefix(v, target)
+      case *parse.ChainNode:
+        v := "." + strings.Join(n.Field, ".")
+        f = strings.HasPrefix(v, target)
+      case *parse.DotNode:
+        f = target == "."
+      }
+      found = found || f
+      return true
+    })
+  }
+  if found {
+    return nil
+  }
+  return ErrNotFound
+}
+//}
+
+//footnote[link_check_variable][@<href>{https://github.com/knsh14/withcheck/blob/master/check.go#L45-L73}]
+
+@<code>{*parse.FieldNode}型や@<code>{*parse.VariableNode}型、@<code>{*parse.ChainNode}型は要素名がスライスになっているので、ドットでつなげてひとつにします。
+@<code>{*parse.IdentifierNode}型はそのまま使います。
 得られた対象の変数の先頭がチェックすべき変数と同じか調べます。
 なぜなら、対象の変数の中のフィールドを使う可能性があるからです。
 
-他の要素としては@<code>{*parse.DotNode}があります。
+他の要素としては@<code>{*parse.DotNode}型があります。
 このノードの場合は完全に同じかチェックします。
+
+=== チェックの結果の返し方
+with句でチェックした変数が@<code>{nil}でない場合にその変数が正しく使われているかチェックすることはできました。
+最後にその結果をわかりやすく返す必要があります。
+
+withcheckでは@<code>{error}型で返すようにしました。
+なぜなら、@<code>{bool}型を使うよりも@<code>{error}型を利用することで失敗時の情報をより多く返すことができます。
+自分たちで定義したエラーの型を使うことで利用者が、どこで失敗したか判別しやすくなります。
+
+本章を執筆している時点ではまだ単にエラーを返すだけですが、今後改修していく予定です。
+
 
 == 最後に
 本章ではtext/templateパッケージで生成したテンプレートを静的解析し、with句でチェックした変数が使われているかを確認するlintツールを作成しました。
