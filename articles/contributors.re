@@ -7,6 +7,9 @@
 == @<chap>{hajimehoshi} Go本体にコントリビュートする方法 / @<tt>{@hajimehoshi}
 ソフトウェアエンジニア。Goでゲームライブラリを作っている。最近白髪が増えた。
 
+== @<chap>{gorilla} TUIツールを作ろう / @<tt>{@gorilla0513}
+ゴリラです。
+
 == @<chap>{po3rin} GoとコンセンサスアルゴリズムRaftによる分散システム構築入門 / @<tt>{@po3rin}
 主にGoを書いています。
 
