@@ -54,6 +54,10 @@ Also, the lack of a type hierarchy makes “objects” in Go feel much more ligh
 //footnote[q_and_a][@<href>{https://golang.org/doc/faq#Is_Go_an_object-oriented_language}]
 
 
+
+
+#@# textlint-disable
+雑メモの塊なので静的解析対象外。
 一番の大きな差異としてGoは
 
 == SRP
@@ -63,15 +67,13 @@ Adaptorパターン、Decoratorパターン、Compositeパターン
 アジャイル開発の奥義
 
 ソフトウェアエンティティは、拡張に大して開いていなければならず、変更に対して閉じていなければならない。
-
+#@# textlint-enable
 #@# textlint-disable
-
 「拡張に対して開いている」。これは、モジュールの振る舞いを拡張できることを意味する。
 アプリケーションの要求が変化したら、それらの変更内容を満たす新しいふるまいでモジュールを拡張することが可能である。言い換えれば、モジュールが実行することを変更できるのである。
 「変更に対して閉じている」。モジュールの振る舞いを拡張した結果として、モジュールのソースやバイナリコードで変更が発生しない。モジュールのバイナリコードは、リンク可能なライブラリなのか、DLIなのか、Javaの@<tt>{.jar}なのかにかかわらず、変更されないままとなる。
-
 #@# textlint-enable
-
+#@# textlint-disable
 == リスコフ
 
 SがTの派生型であるとすれば、T型のオブジェクトをS型のオブジェクトと置き換えたとしても、プログラムは動作し続けるはずである。
@@ -91,6 +93,10 @@ DaveはどうやってGoに紐付けたか。
 == 依存性反転の原則
 poor man Adaptorパターン。Responsible Ownerパターン、Factory Isolationパターン
 Illegitimate Injectionパターン。
+ここまで雑メモ
+#@# textlint-enable
+
+
 
 == 参考文献
  * アジャイルソフトウェア開発の奥義 第2版 オブジェクト指向開発の神髄と匠の技
