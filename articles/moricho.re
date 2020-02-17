@@ -83,7 +83,7 @@ Linuxには、プロセスごとにリソースを分離して提供する「Nam
 たとえばPID名前空間を分離するとしましょう。そうすると、それぞれのPID名前空間で独立にプロセスIDがふられます。つまり、同一ホスト上で同一のPIDを持ったプロセスが同居しているような状態が作れるのです。
 このようにして名前空間を分離することにより、「あるコンテナAがコンテナBの重要なファイルシステムを勝手にアンマウントする」、「コンテナCがコンテナDのネットワークインタフェースを削除する」といったこともできなくなります。
 
-ここで注意するのは、Namespacesはあくまでもプロセス間のカーネルリソースを隔離しているのであって、ホストのハードウェアリソース（CPUやメモリなど）へのアクセスを制限しているわけではないということです。
+注意として、Namespacesはあくまでもプロセス間のカーネルリソースを隔離しているのであって、ホストのハードウェアリソース（CPUやメモリなど）へのアクセスを制限しているわけではありません。
 ハードウェアリソースの制限は、後に紹介する「cgroups」という機能によって実現されます。
 
 それでは実際に、各Namespaceを分離した新たな子プロセスを生成してみましょう。
@@ -91,7 +91,7 @@ Linuxには、プロセスごとにリソースを分離して提供する「Nam
 //list[namespace1][Namespaceの分離][go]{
 func main() {
     cmd := exec.Command("/bin/sh")
-	cmd.SysProcAttr = &unix.SysProcAttr{
+	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags: unix.CLONE_NEWUSER |
 			unix.CLONE_NEWNET |
 			unix.CLONE_NEWPID |
@@ -158,7 +158,7 @@ cmd.SysProcAttr = &unix.SysProcAttr{
 次にその下を見ましょう。
 
 //list[namespace4][プロセスのclone][go]{
-cmd.SysProcAttr = &unix.SysProcAttr{
+cmd.SysProcAttr = &syscall.SysProcAttr{
   UidMappings: []syscall.SysProcIDMap{
     {
       ContainerID: 0,
@@ -176,11 +176,14 @@ cmd.SysProcAttr = &unix.SysProcAttr{
 }
 //}
 
-ここでは、ホストのユーザー名前空間と新たに分離したユーザー名前空間におけるUid/Gidのマッピングを行っています。
-なぜこうするのかというと、単にユーザー名前空間を分離しただけでは起動後のプロセス内でゲストユーザー（nobody）として認識されてしまい、root権限を失うためです。
+ここでは、ホストのユーザー名前空間と新たに分離したユーザー名前空間におけるUID/GIDのマッピングを行っています。
+なぜこうするのかというと、単にユーザー名前空間を分離しただけでは起動後のプロセス内でユーザー/グループがnobody/nogroupとしてなってしまうからです。
+新しいユーザー名前空間で実行されるプロセスのUID/GIDを設定するためには、@<code>{/proc/[pid]/uid_map}と@<code>{/proc/[pid]/gid_map}に対して書き込みを行います。
+Goでは@<code>{syscall.SysProcAttr}に@<code>{UidMappings}と@<code>{GidMappings}を設定することでこれをやってくれます。
+上の例ではrootユーザーとして新たなプロセスを実行しています。
 
 === 2.ファイルシステムの隔離 〜pivot_root〜
-文。
+ファイル。
 
 === 3.ハードウェアリソースの制限 〜cgroup〜
 文。
