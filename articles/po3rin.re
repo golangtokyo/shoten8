@@ -1249,9 +1249,10 @@ curl -X DELETE localhost:12380 \
     -d '{"id": "4", "url": "http://127.0.0.1:42379"}'
 //}
 
-これでクラスターの動的な設定変更機能が完成しました。さらなる応用として、etcdはv3.4からRaftに「リーダー、フォロワー、候補者」に次ぐ4つ目のロールである@<b>{learner（学習者）}@<fn>{learner}を実装しています。これはノードの新規追加時にリーダーのログに追いつくまで非投票メンバーとしてクラスターに参加させるというアイデアです。この方法はログ複製でリーダーが過負荷になるのを防ぎ、クラスター再構成の安全性を高めます。詳しくはetcdのドキュメントをご覧ください@<fn>{learner}
+これでクラスターの動的な設定変更機能が完成しました。さらなる応用として、etcdはv3.4からRaftに「リーダー、フォロワー、候補者」に次ぐ4つ目の状態である@<b>{learner（学習者）}@<fn>{learner}を実装しています(コンセンサスアルゴリズムの実践を考察した論文@<fn>{raft-plactice}では@<b>{non-vorting member（非投票者）}として導入されている)。これはノードの新規追加時にリーダーのログに追いつくまで投票権の無いメンバーとしてクラスターに参加させるというアイデアです。この方法はログ複製でリーダーが過負荷になるのを防ぎ、クラスター再構成の安全性を高めます。
 
 //footnote[learner][@<href>{https://github.com/etcd-io/etcd/blob/master/Documentation/learning/design-learner.md}]
+//footnote[raft-plactice][@<href>{https://github.com/ongardie/dissertation/blob/master/stanford.pdf}]
 
 == Next Step
 
