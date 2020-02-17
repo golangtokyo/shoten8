@@ -138,7 +138,7 @@ func Check(tmpl *template.Template) error {
 //}
 
 //footnote[withcheck_github_link][@<href>{https://github.com/knsh14/withcheck}]
-//footnote[link_check_function][@<href>{https://github.com/knsh14/withcheck/blob/master/check.go#L22-L43}]
+//footnote[link_check_function][@<href>{https://github.com/knsh14/withcheck/blob/v0.0.1/check.go#L22-L43}]
 
 withcheckはwith句に対して処理をします。
 そのため、まずはwith句を探し出します。
@@ -167,7 +167,7 @@ with句は@<code>{parse.WithNode}@<fn>{withnode_document_link}型という型で
 
 === with句でチェックする変数を探す
 最初のステップとしてチェック対象の変数を探し出します。
-実際の処理を@<list>{implementation_get_variable}に示します。
+実際の処理を@<list>{implementation_get_variable}@<fn>{link_get_variables}に示します。
 
 //list[implementation_get_variable][チェック対象の変数を取得する処理の実装]{
 func getVariable(n *parse.PipeNode) ([]string, error) {
@@ -193,6 +193,8 @@ func getVariable(n *parse.PipeNode) ([]string, error) {
   return nil, ErrNotFound
 }
 //}
+
+//footnote[link_get_variables][@<href>{https://github.com/knsh14/withcheck/blob/v0.0.1/check.go#L75-L96}]
 
 with句の条件部分に記述できる形式を@<list>{example_with_statements}に示します。
 
@@ -278,7 +280,7 @@ func checkVariable(list *parse.ListNode, variables []string) error {
 }
 //}
 
-//footnote[link_check_variable][@<href>{https://github.com/knsh14/withcheck/blob/master/check.go#L45-L73}]
+//footnote[link_check_variable][@<href>{https://github.com/knsh14/withcheck/blob/v0.0.1/check.go#L45-L73}]
 
 @<code>{*parse.FieldNode}型や@<code>{*parse.VariableNode}型、@<code>{*parse.ChainNode}型は要素名がスライスになっているので、ドットでつなげてひとつにします。
 @<code>{*parse.IdentifierNode}型はそのまま使います。
