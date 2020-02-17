@@ -2,8 +2,11 @@ PREDEF:
   - preface.re
 
 CHAPS:
-  - article.re
+  - budougumi0617.re
   - hajimehoshi.re
+  - gorilla.re
+  - po3rin.re
+  - kaneshin.re
   - moricho.re
 
 APPENDIX:
