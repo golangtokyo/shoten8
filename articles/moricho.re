@@ -177,7 +177,7 @@ cmd.SysProcAttr = &syscall.SysProcAttr{
 //}
 
 ここでは、ホストのユーザー名前空間と新たに分離したユーザー名前空間におけるUID/GIDのマッピングを行っています。
-なぜこうするのかというと、単にユーザー名前空間を分離しただけでは起動後のプロセス内でユーザー/グループがnobody/nogroupとしてなってしまうからです。
+なぜこうするのかというと、単にユーザー名前空間を分離しただけでは起動後のプロセス内でユーザー/グループがnobody/nogroupとなってしまうからです。
 新しいユーザー名前空間で実行されるプロセスのUID/GIDを設定するためには、@<code>{/proc/[pid]/uid_map}と@<code>{/proc/[pid]/gid_map}に対して書き込みを行います。
 Goでは@<code>{syscall.SysProcAttr}に@<code>{UidMappings}と@<code>{GidMappings}を設定することでこれをやってくれます。
 上の例ではrootユーザーとして新たなプロセスを実行しています。
