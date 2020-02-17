@@ -63,21 +63,87 @@ OSによってファイルシステムは異なります。コンテナでは、
 == 実装
 
 （ローレベル）コンテナランタイムを作るにあたり私たちが実装するべきものは、
-・カーネルリソースの隔離
-・ファイルシステムの隔離
-・ハードウェアリソースの制限
+・カーネルリソースの隔離（Namespace）
+・ファイルシステムの隔離（pivot_root）
+・ハードウェアリソースの制限（cgroups）
 の大きく3つです。
 それぞれ詳しく見ていきましょう。
 
 
-=== 1.Namespaces
-カーネルリソースの隔離
+=== 1.カーネルリソースの隔離 〜Namespaces〜
+Linuxには、プロセスごとにリソースを分離して提供する「Namespaces」という機能があります。
+ここで分離できるリソースは次にあげるものがあります。
 
-=== 2.pivot_root
-ファイルシステムの隔離
+・PID ... プロセスID
+・User ... ユーザID/グループID
+・Mount ... ファイルシステムツリー
+・UTS ... hostname、domainname
+・Network ... ネットワークデバイスやIPアドレス
+・IPC ... プロセス間通信のリソース
 
-=== 3.cgroup
-ハードウェアリソースの制限
+例えばPID名前空間を分離するとしましょう。そうすると、それぞれのPID名前空間で独立にプロセスIDがふられます。つまり、同一ホスト上で同一のPIDを持ったプロセスが同居しているような状態が作れるのです。
+このようにして名前空間を分離することにより、「あるコンテナAがコンテナBの重要なファイルシステムを勝手にアンマウントする」、「コンテナCがコンテナDのネットワークインタフェースを削除する」といったこともできなくなります。
+
+ここで注意するのは、Namespacesはあくまでもプロセス間のカーネルリソースを隔離しているのであって、ホストのハードウェアリソース（CPUやメモリなど）へのアクセスを制限しているわけではないということです。ハードウェアリソースの制限は、後に紹介する「cgroups」という機能によってなされます。
+
+それでは実際に、各Namespaceを分離した新たな子プロセスを生成してみましょう。
+
+//list[namespace1][Namespaceの分離][go]{
+func main() {
+    cmd := exec.Command("/bin/sh")
+	cmd.SysProcAttr = &unix.SysProcAttr{
+		Cloneflags: unix.CLONE_NEWUSER |
+			unix.CLONE_NEWNET |
+			unix.CLONE_NEWPID |
+			unix.CLONE_NEWIPC |
+			unix.CLONE_NEWUTS |
+			unix.CLONE_NEWNS,
+		UidMappings: []syscall.SysProcIDMap{
+			{
+				ContainerID: 0,
+				HostID:      os.Getuid(),
+				Size:        1,
+			},
+		},
+		GidMappings: []syscall.SysProcIDMap{
+			{
+				ContainerID: 0,
+				HostID:      os.Getgid(),
+				Size:        1,
+			},
+		},
+	}
+
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+    cmd.Env = []string{"PS1=[child-process] # "}
+
+    if err := cmd.Run(); err != nil {
+		fmt.Printf("Error running the /bin/sh command - %s\n", err)
+		os.Exit(1)
+	}
+}
+//}
+
+まずはこれを実行してみてください。
+
+//list[namespace2][実行結果]{
+$ go build
+$ ./main
+[child-process] # whoami
+root
+[child-process] # id
+uid=0(root) gid=0(root) groups=0(root)
+//}
+
+新しくプロセスが開始され、rootユーザーとして認識されているのがわかります。
+ではコードの方を見ていきましょう。
+
+
+=== 2.ファイルシステムの隔離 〜pivot_root〜
+
+=== 3.ハードウェアリソースの制限 〜cgroup〜
 
 
 == GoでCLI作成
