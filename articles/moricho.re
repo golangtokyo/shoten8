@@ -1,4 +1,5 @@
 = Goによるコンテナランタイム自作入門
+
 こんにちは、@_moricho_@<fn>{_moricho_}です。
 みなさんコンテナ使ってますか。最近ではDockerやKubernetesなど、業務の中でもすっかりコンテナ技術が浸透してきています。またAWSのLambdaなども実は裏でコンテナ技術が使われています。
 しかしどうやってそのコンテナ型仮想化が実現されているかという内部のことまでは、なかなか触れる機会がありません。
@@ -126,7 +127,7 @@ func main() {
 
 まずはこれを実行してみてください。
 
-//list[namespace2][実行結果]{
+//list[namespace2][実行結果][]{
 $ go build
 $ ./main
 [child-process] # whoami
@@ -138,6 +139,44 @@ uid=0(root) gid=0(root) groups=0(root)
 新しくプロセスが開始され、rootユーザーとして認識されているのがわかります。
 ではコードの方を見ていきましょう。
 
+//list[namespace3][プロセスのclone][go]{
+cmd.SysProcAttr = &unix.SysProcAttr{
+    Cloneflags: unix.CLONE_NEWUSER |
+        unix.CLONE_NEWNET |
+        unix.CLONE_NEWPID |
+        unix.CLONE_NEWIPC |
+        unix.CLONE_NEWUTS |
+        unix.CLONE_NEWNS,
+}
+//}
+
+まずプロセスの起動に際して@<code>{Cloneflags}というものを渡しています。これはLinuxカーネルのシステムコールである@<code>{clone(2)}コマンドに渡せるflagと同じです。
+@<code>{clone(2)}とは、Linuxが子プロセスの作成をするときに呼ばれるシステムコールです。
+ここでは上であげた６つの名前空間すべてを新しく分離しています。
+
+次にその下を見ましょう。
+
+//list[namespace4][プロセスのclone][go]{
+cmd.SysProcAttr = &unix.SysProcAttr{
+  UidMappings: []syscall.SysProcIDMap{
+    {
+      ContainerID: 0,
+      HostID:      os.Getuid(),
+      Size:        1,
+    },
+  },
+  GidMappings: []syscall.SysProcIDMap{
+    {
+      ContainerID: 0,
+      HostID:      os.Getgid(),
+      Size:        1,
+    },
+  },
+}
+//}
+
+ここでは、ホストのユーザー名前空間と新たに分離したユーザー名前空間におけるUid/Gidのマッピングを行っています。
+なぜこうするのかというと、単にユーザー名前空間を分離しただけでは起動後のプロセス内でゲストユーザー（nobody）として認識されてしまい、root権限を失うためです。
 
 === 2.ファイルシステムの隔離 〜pivot_root〜
 文。
