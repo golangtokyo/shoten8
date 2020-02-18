@@ -6,6 +6,8 @@
 DockerしかりLambdaしかり、コンテナ技術の中核を成すのが「コンテナランタイム」という部分です。
 ここではGoを使って実際に簡易的なオリジナルのコンテナランタイムを作成しながら、コンテナ型仮想化の仕組みを見ていきます。本章がコンテナへの理解や探究の一助になれば幸いです。
 
+（本章では開発環境としてLinuxを想定しています。）
+
 //footnote[_moricho_][@<href>{https://twitter.com/_moricho_}]
 
 == コンテナランタイムとは
@@ -71,14 +73,14 @@ OSによってファイルシステムは異なります。コンテナでは、
 
 === 1.カーネルリソースの隔離 〜Namespaces〜
 Linuxには、プロセスごとにリソースを分離して提供する「Namespaces」という機能があります。
-ここで分離できるリソースは次にあげるものがあります。
-
+分離できるリソースには、
 * PID：プロセスID
 * User：ユーザーID/グループID
 * Mount：ファイルシステムツリー
 * UTS：hostname、domainname
 * Network：ネットワークデバイスやIPアドレス
 * IPC：プロセス間通信のリソース
+があります。
 
 たとえばPID名前空間を分離するとしましょう。そうすると、それぞれのPID名前空間で独立にプロセスIDがふられます。つまり、同一ホスト上で同一のPIDを持ったプロセスが同居しているような状態が作れるのです。
 このようにして名前空間を分離することにより、「あるコンテナAがコンテナBの重要なファイルシステムを勝手にアンマウントする」、「コンテナCがコンテナDのネットワークインタフェースを削除する」といったこともできなくなります。
@@ -183,7 +185,7 @@ Goでは@<code>{syscall.SysProcAttr}に@<code>{UidMappings}と@<code>{GidMapping
 上の例ではrootユーザーとして新たなプロセスを実行しています。
 
 === 2.ファイルシステムの隔離 〜pivot_root〜
-前項までで、マウント名前空間（CLONE_NEWNSフラッグで指定したもの）含む各名前空間を分離したプロセスを起動するところまでやりました。
+前項までは、マウント名前空間（CLONE_NEWNSフラッグで指定したもの）含む各名前空間を分離したプロセスを起動するところまでやりました。
 前項のスクリプトを実行し、起動したプロセスに入った状態でプロセス内で何がマウントされているか見てましょう。
 
 //list[mount1][実行結果][]{
@@ -195,12 +197,64 @@ devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=000 0 0
 //}
 
 マウント空間を分離したはずなのに、ホストでマウントされている多くのマウントの情報を見ることができてしまいます。
-@<href>{http://man7.org/linux/man-pages/man7/mount_namespaces.7.html, mount_namespaces（7）}を見るとわかりますが、CLONE_NEWNSフラッグ付きで@<code>{clone()}が呼ばれた場合、呼び出し元のマウントポイントのリストが新たなプロセスのそれにコピーされる仕様になっています。
+@<href>{http://man7.org/linux/man-pages/man7/mount_namespaces.7.html, mount_namespaces（7）}を見ると、それがなぜだかわかります。
+CLONE_NEWNSフラッグ付きで@<code>{clone()}が呼ばれた場合、呼び出し元のマウントポイントのリストが新たなプロセスのそれにコピーされる仕様になっています。
 これでは、コンテナからホストの情報が見えてしまっているためよくありません。
 そこで登場するのが@<code>{pivot_root}です。
 
 Linuxには、プロセスのルートファイルシステムを変更する@<code>{pivot_root}という機能があります。
-引数として@<code>{new_root}と@<code>{put_old}を取り、呼び出し元のプロセスのルートファイルシステムを@<code>{put_old}ディレクトリに移動させ、@<code>{new_root}を呼び出し元のプロセスの新しいルートファイルシステムにします。
+@<code>{pivot_root}は引数として@<code>{new_root}と@<code>{put_old}を取ります。
+呼び出し元のプロセスのルートファイルシステムを@<code>{put_old}ディレクトリに移動させ、@<code>{new_root}を呼び出し元のプロセスの新しいルートファイルシステムにします。
+
+また@<code>{pivot_root}には、new_rootとput_oldに関して制約があります。
+* ディレクトリでなければならない
+* new_rootとput_oldは現在のrootと同じファイルシステムにあってはならない
+* put_oldはnew_rootの下になければならない
+* 他のファイルシステムが put_old にマウントされていてはならない
+の４つです。
+
+これらを考慮して@<code>{pivot_root}を実装しましょう。
+
+//list[mount2][pivot_rootの実装][go]{
+func pivotRoot(newroot string) error {
+	putold := filepath.Join(newroot, "/oldrootfs")
+
+	// pivot_rootの条件を満たすために、新たなrootで自分自身をバインドマウント
+	if err := syscall.Mount(newroot, newroot, "", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(putold, 0700); err != nil {
+		return err
+	}
+
+	if err := syscall.PivotRoot(newroot, putold); err != nil {
+		return err
+	}
+
+	if err := os.Chdir("/"); err != nil {
+		return err
+	}
+
+	putold = "/oldrootfs"
+	if err := syscall.Unmount(putold, syscall.MNT_DETACH); err != nil {
+		return err
+	}
+
+	if err := os.RemoveAll(putold); err != nil {
+		return err
+	}
+
+	return nil
+}
+//}
+
+流れを説明すると、
+1. new_rootでnew_root自身をバインドマウント（ここはあまり本質ではありません）
+2. pivot_rootを実行
+3. 不要になった以前のルートファイルシステムをアンマウント、そしてディレクトリを削除
+です。
+
 
 
 === 3.ハードウェアリソースの制限 〜cgroup〜
