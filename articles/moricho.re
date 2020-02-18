@@ -41,8 +41,8 @@ DockerしかりLambdaしかり、コンテナ技術の中核を成すのが「�
 
 たとえばmacOSやWindowsの上でUbuntuイメージは直接動きません。
 
-鋭い方は、ではなぜ普段私たちのMacの上でCentOSやUbuntuのDockerイメージが動くのか疑問に思ったのではないでしょうか。
-実は私たちがMacで使っているDocker、正確にはDockeer for Macは、「LinuxKit」という軽量のLinuxVMとして動作しています。つまり、Mac上にハイパーバイザ型のミニマムなLinuxを立ち上げ、そのうえでコンテナが動いているのです。（より正確には、MacとLinuxKitの間に「HyperKit」というmacOSの仮想化システムが入ります。）
+鋭い方は、ではなぜ普段私たちのmacOSの上でCentOSやUbuntuのDockerイメージが動くのか疑問に思ったのではないでしょうか。
+実は私たちがMacで使っているDocker、正確にはDockeer for Macは、「LinuxKit」という軽量のLinuxVMとして動作しています。つまり、macOS上にハイパーバイザ型のミニマムなLinuxを立ち上げ、そのうえでコンテナが動いているのです。（より正確には、macOSとLinuxKitの間に「HyperKit」というmacOSの仮想化システムが入ります。）
 どうりでDocker for Macの立ち上げが遅いわけですよね。
 
 === 異なるOSイメージを動かすためのキー
@@ -269,7 +269,7 @@ func pivotRoot(newroot string) error {
  2. pivot_rootを実行
  3. 不要になった以前のルートファイルシステムをアンマウント、そしてディレクトリを削除
 
-@<code>{pivot_root}の制約の一つに「new_rootとput_oldは現在のrootと同じファイルシステムにあってはならない」がありました。
+@<code>{pivot_root}の制約の１つに「new_rootとput_oldは現在のrootと同じファイルシステムにあってはならない」がありました。
 まず@<code>{new_root}を新たなマウントポイントとして@<code>{new_root}自身でバインドマウントすることで、これを満たすようにしています。
 またマウントは通常、ディレクトリツリーをブロックデバイスの領域に紐付けるために行われます。
 それに対し「バインドマウント」は、ディレクトリをディレクトリにマウントします。
