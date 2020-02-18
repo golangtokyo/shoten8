@@ -14,11 +14,11 @@ DockerしかりLambdaしかり、コンテナ技術の中核を成すのが「�
 コンテナランタイムはコンテナの実行管理をするものです。コンテナランタイムは大きく分けて「ハイレベルコンテナランタイム」と「ローレベルランタイム」に分割されます。
 たとえばDockerなどのコンテナを扱う際は、基本的に「ハイレベルランタイム => ローレベルランタイム」の順で処理が流れていきます。
 
- * ハイレベルランタイム
+=== ハイレベルランタイム
 ハイレベルランタイムでは直接コンテナを操作するわけではなく、その次のローレベルランタイムへ命令を渡す役割を果たします。
-またここではイメージの管理（pull/push/rm…）も担います。
+またここではイメージの管理（@<tt>{pull/push/rm…}）も担います。
 
- * ローレベルランタイム
+=== ローレベルランタイム
 ハイレベルランタイムから受け取った指示でコンテナの起動や停止をキックするなど、コンテナの直接的な操作を担当する部分です。
 今回は、コンテナのコアとなるこの部分を作っていきます。
 
@@ -48,7 +48,7 @@ DockerしかりLambdaしかり、コンテナ技術の中核を成すのが「�
 === 異なるOSイメージを動かすためのキー
 コンテナはOS機能すべてを再現するものではなく、あくまでも特定のディストリビューション上のアプリケーションの動きを再現するものです。そしてそのキーとなるものが「Linuxカーネル」と「ファイルシステム」です。
 
- * Linuxカーネル
+==== Linuxカーネル
 LinuxディストリビューションはいずれもLinuxカーネルを使って動作します。またOS上で動くアプリケーションは、システムコールを使ってカーネルに対して要求を出したりします。
 肝は、システムコールにおけるアプリケーションとLinuxカーネル間のインタフェースである「ABI（Application Binary Intetface）」です。このインタフェースは互換性を考慮して作られており、Linuxカーネルのバージョンの多少の違いによってシステムコールが大きく変わることはありません。そのため、コンテナとホストのOSのバージョンが多少違っても問題ありません。
 しかし、このままではコンテナプロセスがホストOSのリソースを使いたい放題です。これでは困るため、次の２つを行います。
@@ -56,7 +56,7 @@ LinuxディストリビューションはいずれもLinuxカーネルを使っ�
  * カーネルリソースの隔離
  * ハードウェアリソースの制限
 
- * ファイルシステム
+==== ファイルシステム
 OSによってファイルシステムは異なります。コンテナでは、あるOSと同じ状態のファイルシステムをプロセスに対して見せることで、そのOSさながらの環境を実現しています。
 そのためにも、プロセスに対してファイルシステムのルートを勘違いさせます。また、あるコンテナがホストやほかのコンテナのファイルを見れてしまうと分離度が下がってしまうため、次のことを行います。
 
@@ -74,7 +74,7 @@ OSによってファイルシステムは異なります。コンテナでは、
 それぞれ詳しく見ていきましょう。
 
 
-=== 1.カーネルリソースの隔離
+=== カーネルリソースの隔離
 Linuxには、プロセスごとにリソースを分離して提供する「Namespaces」という機能があります。
 分離できるリソースには次のようなものがあります。
 
@@ -187,25 +187,32 @@ cmd.SysProcAttr = &syscall.SysProcAttr{
 Goでは@<code>{syscall.SysProcAttr}に@<code>{UidMappings}と@<code>{GidMappings}を設定することでこれをやってくれます。
 @<list>{namespace4}ではrootユーザーとして新たなプロセスを実行しています。
 
-=== 2.ファイルシステムの隔離
+=== ファイルシステムの隔離
 前項までは、マウント名前空間（@<code>{CLONE_NEWNS}フラグで指定したもの）含む各名前空間を分離したプロセスを起動するところまでやりました。
 前項のスクリプトを実行し、起動したプロセスに入った状態でプロセス内で何がマウントされているか見てましょう。
 
 //list[mount1][実行結果][]{
 -[shoten]- # cat /proc/mounts
 /dev/xvda1 / ext4 rw,relatime,discard,data=ordered 0 0
-udev /dev devtmpfs rw,nosuid,relatime,size=491524k,nr_inodes=122881,mode=755 0 0
-devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=000 0 0
+udev /dev devtmpfs rw,nosuid,relatime,size=491524k,\
+  nr_inodes=122881,mode=755 0 0
+devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=5,\
+  mode=620,ptmxmode=000 0 0
 ...
 //}
 
 マウント空間を分離したはずなのに、ホストでマウントされている多くのマウントの情報を見ることができてしまいます。
-@<href>{http://man7.org/linux/man-pages/man7/mount_namespaces.7.html, mount_namespaces（7）}を見ると、それがなぜだかわかります。
-CLONE_NEWNSフラグ付きで@<code>{clone()}が呼ばれた場合、呼び出し元のマウントポイントのリストが新たなプロセスのそれにコピーされる仕様になっています。
+@<code>{mount_namespaces}@<fn>{mount_namespaces}のmanページを見ると、それがなぜだかわかります。
+
+//footnote[mount_namespaces][@<href>{http://man7.org/linux/man-pages/man7/mount_namespaces.7.html}]
+
+CLONE_NEWNSフラグ付きで@<code>{clone()}が呼ばれた場合、呼び出し元のマウントポイントのリストが新たなプロセスのそれにコピーされる仕様になっているのです。
 これでは、コンテナからホストの情報が見えてしまっているためよくありません。
-そこで登場するのが@<b>{pivot_root}です。
+そこで登場するのが@<b>{pivot_root}@<fn>{pivot_root}です。
 
 pivot_rootについて説明するにあたって、まずはファイルシステムについておさらいしましょう。
+
+//footnote[pivot_root][@<href>{https://linuxjm.osdn.jp/html/LDP_man-pages/man2/pivot_root.2.html}]
 
 ==== ファイルシステムとは
 ファイルシステムとは、@<b>{ブロックデバイスのデータを構造的に扱う仕組み}のことです。ブロックデバイスはHDDやSSDなどを指します。
@@ -234,7 +241,13 @@ func pivotRoot(newroot string) error {
 	putold := filepath.Join(newroot, "/oldrootfs")
 
 	// pivot_rootの条件を満たすために、新たなrootで自分自身をバインドマウント
-	if err := syscall.Mount(newroot, newroot, "", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
+	if err := syscall.Mount(
+      newroot,
+      newroot,
+      "",
+      syscall.MS_BIND|syscall.MS_REC,
+      "",
+    ); err != nil {
 		return err
 	}
 
@@ -283,7 +296,7 @@ func pivotRoot(newroot string) error {
 文。
 
 
-=== 3.ハードウェアリソースの制限
+=== ハードウェアリソースの制限
 文。
 
 == 自作コンテナをさらに拡張する
