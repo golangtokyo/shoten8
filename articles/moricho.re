@@ -298,7 +298,7 @@ func pivotRoot(newroot string) error {
 では@<list>{mount2}の@<code>{pivot_root}関数はどのタイミングで実行すればよいでしょうか。
 もちろん名前空間が分離された後ですが、分離度の観点から、プロセスが起動し@<code>{/bin/sh}が実行されるよりも前がいいです。
 しかし@<list>{namespace1}で見たように、一度@<code>{cmd.Run()}が呼ばれたら名前空間が分離され、そしてプロセスが実行されてしまいます。
-ここを上手く解決してくれるのが@<code>{reexec}パッケージです。
+ここをうまく解決してくれるのが@<code>{reexec}パッケージです。
 
 ==== reexecパッケージ
 @<code>{reexec}パッケージ@<fn>{reexec}は、OSS版Dockerの開発を進めるMobyプロジェクト@<fn>{moby}から提供されています。
@@ -346,11 +346,11 @@ func main() {
 まず@<code>{init()}での初期化処理が追加されているのがわかります。
 またその初期化処理の中で@<code>{reexec.Register("InitContainer", InitContainer)}が呼ばれています。
 ここでは、後述する@<code>{InitContainer}関数を@<b>{InitContainer}という名前でreexecに登録しました。
-こうして登録しておくことで、 @<code>{main()}内で@<tt>{InitContainer}というコマンドとして実行できるようになります。
+こうして登録しておくことで、 @<code>{main()}内で@<tt>{InitContainer}というコマンドとして実行できます。
 
 続いて@<code>{InitContainer()}です。
 この関数内の@<code>{newrootPath}は、@<tt>{InitContainer}コマンドの引数として渡ってくる予定のものです。
-そしてこの@<code>{newrootPath}を、@<list>{mount2}で実装した@<code>{pivotRoot()}に渡し、@<tt>{pivot_root}を行っています。
+まずこの@<code>{newrootPath}を、@<list>{mount2}で実装した@<code>{pivotRoot()}に渡し、@<tt>{pivot_root}を行っています。
 そして@<code>{InitContainer()}の最後には、@<code>{Run()}で今までどおり@<code>{exec.Cmd}から@<code>{/bin/sh}を実行しています。
 
 では最後に@<code>{main()}を見ていきましょう。
