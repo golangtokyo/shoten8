@@ -4,7 +4,7 @@
 みなさんコンテナ使ってますか。最近ではDockerやKubernetesなど、業務の中でもすっかりコンテナ技術が浸透してきています。またAWSのLambdaなども実は裏でコンテナ技術が使われています。
 しかしどうやってそのコンテナ型仮想化が実現されているかという内部のことまでは、なかなか触れる機会がありません。
 DockerしかりLambdaしかり、コンテナ技術の中核を成すのが「コンテナランタイム」という部分です。
-ここではGoを使って実際に簡易的なオリジナルのコンテナランタイムを作成しながら、コンテナ型仮想化の仕組みを見ていきます。本章がコンテナへの理解や探究の一助になれば幸いです。
+本章ではGoを使って実際に簡易的なオリジナルのコンテナランタイムを作成しながら、コンテナ型仮想化の仕組みを見ていきます。本章がコンテナへの理解や探究の一助になれば幸いです。
 
 （本章では開発環境としてLinuxを想定しています。）
 
@@ -27,7 +27,7 @@ DockerしかりLambdaしかり、コンテナ技術の中核を成すのが「�
 
 == コンテナ型仮想化の概要
 
-ここでは、コンテナをコンテナたらしめている仕組みをざっくり説明します。
+本節では、コンテナをコンテナたらしめている仕組みをざっくり説明します。
 実際にコンテナランタイムを実装していく上で見通しをよくするためにも必要になる知識ですので、ざっと理解しておきましょう。
 
 === コンテナとは
@@ -36,7 +36,7 @@ DockerしかりLambdaしかり、コンテナ技術の中核を成すのが「�
 
 === なぜ異なるOSベースのイメージが動くのか
 普段何気なく使っているコンテナ技術ですが、そもそもなんでホストと異なるOSのイメージが動くのか不思議に思ったことがある方も多いのではないのでしょうか。
-まず前提として、あるホストの上ですべてのOSイメージが動くわけではありません。ホストがあるLinuxディストリビューションであると仮定すると、対象となるイメージはあくまでも次のようなものです。
+まず前提として、あるホストの上ですべてのOSイメージが動くわけではありません。ホストがあるLinuxディストリビューションであると仮定すると、実行可能なイメージはあくまでも次のようなものです。
 
  * 異なるLinuxディストリビューション
  * 同じLinuxディストリビューションの異なるバージョン
@@ -77,7 +77,7 @@ OSによってファイルシステムは異なります。コンテナでは、
 
 
 === カーネルリソースの隔離
-Linuxには、プロセスごとにリソースを分離して提供する「Namespaces」という機能があります。
+Linuxには、プロセスごとにリソースを分離して提供する@<tt>{Namespaces}という機能があります。
 分離できるリソースには次のようなものがあります。
 
  * PID：プロセスID
@@ -158,9 +158,11 @@ cmd.SysProcAttr = &unix.SysProcAttr{
 }
 //}
 
-まずプロセスの起動に際して@<code>{Cloneflags}というものを渡しています。これはLinuxカーネルのシステムコールである@<code>{clone(2)}コマンドに渡せるflagと同じです。
+まずプロセスの起動に際して@<code>{Cloneflags}というものを渡しています。これはLinuxカーネルのシステムコールである@<code>{clone(2)}@<fn>{clone}コマンドに渡せるflagと同じです。
 @<code>{clone(2)}とは、Linuxが子プロセスの作成をするときに呼ばれるシステムコールです。
 ここでは上であげた６つの名前空間すべてを新しく分離しています。
+
+//footnote[clone][@<href>{https://linuxjm.osdn.jp/html/LDP_man-pages/man2/clone.2.html}]
 
 次にその下を見ましょう。
 
@@ -225,11 +227,11 @@ devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=5,\
 
 ==== pivot_root
 ファイルシステムについて理解したところで、続いてpivot_rootについて説明していきます。
-@<b>{pivot_root}とは、プロセスのルートファイルシステムを変更するLinuxの機能です。
-@<b>{pivot_root}は引数として@<code>{new_root}と@<code>{put_old}を取ります。
+@<code>{pivot_root}とは、プロセスのルートファイルシステムを変更するLinuxの機能です。
+@<code>{pivot_root}は引数として@<code>{new_root}と@<code>{put_old}を取ります。
 呼び出し元のプロセスのルートファイルシステムを@<code>{put_old}ディレクトリに移動させ、@<code>{new_root}を呼び出し元のプロセスの新しいルートファイルシステムにします。
 
-また@<b>{pivot_root}には、new_rootとput_oldに関して制約があります。
+また@<code>{pivot_root}には、new_rootとput_oldに関して制約があります。
 
  * ディレクトリでなければならない
  * 現在のrootと同じファイルシステムにあってはならない
@@ -358,7 +360,12 @@ func main() {
 //list[mount4][reexecを使ったコード２：main.go][go]{
 func main() {
 	var rootfsPath string
-	flag.StringVar(&rootfsPath, "rootfs", "/tmp/shoten/rootfs", "Path to the root filesystem to use")
+	flag.StringVar(
+		&rootfsPath,
+		"rootfs",
+		"/tmp/shoten/rootfs",
+		"Path to the root filesystem to use",
+	)
 	flag.Parse()
 
 	cmd := reexec.Command("InitContainer", rootfsPath)
@@ -398,7 +405,6 @@ func main() {
 
 新たに@<code>{cmd := reexec.Command("InitContainer", rootfsPath)}として、@<list>{mount3}で登録した@<code>{InitContainer}コマンドを呼んでいるのがわかります。
 それ以外は@<list>{namespace1}とほとんど変わらず、@<code>{cmd}に対して@<code>{Cloneflags}や@<code>{Uid/GidMappings}の設定をしています。
-
 では、@<list>{mount3}、@<list>{mount4}で見た新たな@<tt>{main.go}を実行してみましょう。
 
 //list[mount5][実行結果][]{
