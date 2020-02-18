@@ -14,6 +14,8 @@ DockerしかりLambdaしかり、コンテナ技術の中核を成すのが「�
 コンテナランタイムはコンテナの実行管理をするものです。コンテナランタイムは大きく分けて「ハイレベルコンテナランタイム」と「ローレベルランタイム」に分割されます。
 たとえばDockerなどのコンテナを扱う際は、基本的に「ハイレベルランタイム => ローレベルランタイム」の順で処理が流れていきます。
 
+//image[morito/runtime][コンテナランタイム][scale=0.9]
+
 === ハイレベルランタイム
 ハイレベルランタイムでは直接コンテナを操作するわけではなく、その次のローレベルランタイムへ命令を渡す役割を果たします。
 またここではイメージの管理（@<tt>{pull/push/rm…}）も担います。
@@ -42,13 +44,13 @@ DockerしかりLambdaしかり、コンテナ技術の中核を成すのが「�
 たとえばmacOSやWindowsの上でUbuntuイメージは直接動きません。
 
 鋭い方は、ではなぜ普段私たちのmacOSの上でCentOSやUbuntuのDockerイメージが動くのか疑問に思ったのではないでしょうか。
-実は私たちがMacで使っているDocker、正確にはDockeer for Macは、「LinuxKit」という軽量のLinuxVMとして動作しています。つまり、macOS上にハイパーバイザ型のミニマムなLinuxを立ち上げ、そのうえでコンテナが動いているのです。（より正確には、macOSとLinuxKitの間に「HyperKit」というmacOSの仮想化システムが入ります。）
-どうりでDocker for Macの立ち上げが遅いわけですよね。
+実は私たちがMacで使っているDocker、正確にはDocker for Macは、「LinuxKit」という軽量のLinuxVMとして動作しています。つまり、macOS上にハイパーバイザ型のミニマムなLinuxを立ち上げ、そのうえでコンテナが動いているのです。（より正確には、macOSとLinuxKitの間に「HyperKit」というmacOSの仮想化システムが入ります。）
+どうりでDocker for Macの起動が遅いわけですよね。
 
 === 異なるOSイメージを動かすためのキー
 コンテナはOS機能すべてを再現するものではなく、あくまでも特定のディストリビューション上のアプリケーションの動きを再現するものです。そしてそのキーとなるものが「Linuxカーネル」と「ファイルシステム」です。
 
-==== Linuxカーネル
+==== 1. Linuxカーネル
 LinuxディストリビューションはいずれもLinuxカーネルを使って動作します。またOS上で動くアプリケーションは、システムコールを使ってカーネルに対して要求を出したりします。
 肝は、システムコールにおけるアプリケーションとLinuxカーネル間のインタフェースである「ABI（Application Binary Intetface）」です。このインタフェースは互換性を考慮して作られており、Linuxカーネルのバージョンの多少の違いによってシステムコールが大きく変わることはありません。そのため、コンテナとホストのOSのバージョンが多少違っても問題ありません。
 しかし、このままではコンテナプロセスがホストOSのリソースを使いたい放題です。これでは困るため、次の２つを行います。
@@ -56,7 +58,7 @@ LinuxディストリビューションはいずれもLinuxカーネルを使っ�
  * カーネルリソースの隔離
  * ハードウェアリソースの制限
 
-==== ファイルシステム
+==== 2. ファイルシステム
 OSによってファイルシステムは異なります。コンテナでは、あるOSと同じ状態のファイルシステムをプロセスに対して見せることで、そのOSさながらの環境を実現しています。
 そのためにも、プロセスに対してファイルシステムのルートを勘違いさせます。また、あるコンテナがホストやほかのコンテナのファイルを見れてしまうと分離度が下がってしまうため、次のことを行います。
 
@@ -93,7 +95,7 @@ Linuxには、プロセスごとにリソースを分離して提供する「Nam
 
 それでは実際に、各Namespaceを分離した新たな子プロセスを生成してみましょう。
 
-//list[namespace1][Namespaceの分離][go]{
+//list[namespace1][Namespaceの分離：main.go][go]{
 func main() {
   cmd := exec.Command("/bin/sh")
 	cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -134,7 +136,7 @@ func main() {
 まずは@<list>{namespace1}を実行してみてください。
 
 //list[namespace2][実行結果][]{
-$ go build
+$ go build -o main
 $ ./main
 -[shoten]- # whoami
 root
@@ -192,6 +194,8 @@ Goでは@<code>{syscall.SysProcAttr}に@<code>{UidMappings}と@<code>{GidMapping
 前項のスクリプトを実行し、起動したプロセスに入った状態でプロセス内で何がマウントされているか見てましょう。
 
 //list[mount1][実行結果][]{
+$ go build -o main
+$ ./main
 -[shoten]- # cat /proc/mounts
 /dev/xvda1 / ext4 rw,relatime,discard,data=ordered 0 0
 udev /dev devtmpfs rw,nosuid,relatime,size=491524k,\
@@ -210,7 +214,7 @@ devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=5,\
 これでは、コンテナからホストの情報が見えてしまっているためよくありません。
 そこで登場するのが@<b>{pivot_root}@<fn>{pivot_root}です。
 
-pivot_rootについて説明するにあたって、まずはファイルシステムについておさらいしましょう。
+@<code>{pivot_root}について説明するにあたって、まずはファイルシステムについておさらいしましょう。
 
 //footnote[pivot_root][@<href>{https://linuxjm.osdn.jp/html/LDP_man-pages/man2/pivot_root.2.html}]
 
@@ -241,13 +245,13 @@ func pivotRoot(newroot string) error {
 	putold := filepath.Join(newroot, "/oldrootfs")
 
 	// pivot_rootの条件を満たすために、新たなrootで自分自身をバインドマウント
-	if err := syscall.Mount(
-      newroot,
-      newroot,
-      "",
-      syscall.MS_BIND|syscall.MS_REC,
-      "",
-    ); err != nil {
+  if err := syscall.Mount(
+		newroot,
+		newroot,
+		"",
+		syscall.MS_BIND|syscall.MS_REC,
+		"",
+	); err != nil {
 		return err
 	}
 
@@ -291,9 +295,124 @@ func pivotRoot(newroot string) error {
 そしてこの後に@<code>{pivot_root}を行うことで、新たに@<code>{new_root}がファイルシステムのルートになり、その上位階層（ホストのディレクトリ）は見ることができなくなります。
 また@<code>{pivot_root}では元のファイルシステムが@<code>{put_old}をマウントポイントとしてマウントされるため、コンテナにホストの情報が残ったままになってしまいます。これを回避するために、続いて@<code>{put_old}をアンマウントしてから削除しています。
 
+では@<list>{mount2}の@<code>{pivot_root}関数はどのタイミングで実行すればよいでしょうか。
+もちろん名前空間が分離された後ですが、分離度の観点から、プロセスが起動し@<code>{/bin/sh}が実行されるよりも前がいいです。
+しかし@<list>{namespace1}で見たように、一度@<code>{cmd.Run()}が呼ばれたら名前空間が分離され、そしてプロセスが実行されてしまいます。
+ここを上手く解決してくれるのが@<code>{reexec}パッケージです。
 
-==== reexec
-文。
+==== reexecパッケージ
+@<code>{reexec}パッケージ@<fn>{reexec}は、OSS版Dockerの開発を進めるMobyプロジェクト@<fn>{moby}から提供されています。
+さっそく、@<code>{reexec}を使って@<list>{namespace1}をアップデートしたコードを見てましょう。
+
+//list[mount3][reexecを使ったコード１：main.go][go]{
+func init() {
+	reexec.Register("InitContainer", InitContainer)
+	if reexec.Init() {
+		os.Exit(0)
+	}
+}
+
+func InitContainer() {
+	newrootPath := os.Args[1]
+	if err := pivotRoot(newrootPath); err != nil {
+		fmt.Printf("Error running pivot_root - %s\n", err)
+		os.Exit(1)
+	}
+
+	Run()
+}
+
+func Run() {
+	cmd := exec.Command("/bin/sh")
+
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	cmd.Env = []string{"PS1=-[shoten]- # "}
+
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("Error running the /bin/sh command - %s\n", err)
+		os.Exit(1)
+	}
+}
+
+func main() {
+  ...
+}
+//}
+
+@<list>{mount3}について説明していきます。
+まず@<code>{init()}での初期化処理が追加されているのがわかります。
+またその初期化処理の中で@<code>{reexec.Register("InitContainer", InitContainer)}が呼ばれています。
+ここでは、後述する@<code>{InitContainer}関数を@<b>{InitContainer}という名前でreexecに登録しました。
+こうして登録しておくことで、 @<code>{main()}内で@<tt>{InitContainer}というコマンドとして実行できるようになります。
+
+続いて@<code>{InitContainer()}です。
+この関数内の@<code>{newrootPath}は、@<tt>{InitContainer}コマンドの引数として渡ってくる予定のものです。
+そしてこの@<code>{newrootPath}を、@<list>{mount2}で実装した@<code>{pivotRoot()}に渡し、@<tt>{pivot_root}を行っています。
+そして@<code>{InitContainer()}の最後には、@<code>{Run()}で今までどおり@<code>{exec.Cmd}から@<code>{/bin/sh}を実行しています。
+
+では最後に@<code>{main()}を見ていきましょう。
+
+//list[mount4][reexecを使ったコード２：main.go][go]{
+func main() {
+	var rootfsPath string
+	flag.StringVar(&rootfsPath, "rootfs", "/tmp/shoten/rootfs", "Path to the root filesystem to use")
+	flag.Parse()
+
+	cmd := reexec.Command("InitContainer", rootfsPath)
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Cloneflags: syscall.CLONE_NEWUSER |
+			syscall.CLONE_NEWNET |
+			syscall.CLONE_NEWPID |
+			syscall.CLONE_NEWIPC |
+			syscall.CLONE_NEWUTS |
+			syscall.CLONE_NEWNS,
+		UidMappings: []syscall.SysProcIDMap{
+			{
+				ContainerID: 0,
+				HostID:      os.Getuid(),
+				Size:        1,
+			},
+		},
+		GidMappings: []syscall.SysProcIDMap{
+			{
+				ContainerID: 0,
+				HostID:      os.Getgid(),
+				Size:        1,
+			},
+		},
+	}
+
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("Error running the /bin/sh command - %s\n", err)
+		os.Exit(1)
+	}
+}
+//}
+
+新たに@<code>{cmd := reexec.Command("InitContainer", rootfsPath)}として、@<list>{mount3}で登録した@<code>{InitContainer}コマンドを呼んでいるのがわかります。
+それ以外は@<list>{namespace1}とほとんど変わらず、@<code>{cmd}に対して@<code>{Cloneflags}や@<code>{Uid/GidMappings}の設定をしています。
+
+では、@<list>{mount3}、@<list>{mount4}で見た新たな@<tt>{main.go}を実行してみましょう。
+
+//list[mount5][実行結果][]{
+$ go build -o main
+$ ./main
+-[shoten]- # cat /proc/mounts
+/dev/xvda1 / ext4 rw,relatime,discard,data=ordered 0 0
+proc /proc proc rw,relatime 0 0
+//}
+
+@<list>{mount1}とは違い、限られたマウントポイントしか存在していないことがわかります。
+
+//footnote[reexec][@<href>{https://github.com/moby/moby/tree/master/pkg/reexec}]
+//footnote[moby][@<href>{https://mobyproject.org/}]
 
 
 === ハードウェアリソースの制限
