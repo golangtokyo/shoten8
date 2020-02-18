@@ -206,7 +206,7 @@ devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=5,\
 
 //footnote[mount_namespaces][@<href>{http://man7.org/linux/man-pages/man7/mount_namespaces.7.html}]
 
-CLONE_NEWNSフラグ付きで@<code>{clone()}が呼ばれた場合、呼び出し元のマウントポイントのリストが新たなプロセスのそれにコピーされる仕様になっているのです。
+@<code>{CLONE_NEWNS}フラグ付きで@<code>{clone()}が呼ばれた場合、呼び出し元のマウントポイントのリストが新たなプロセスへコピーされる仕様になっているのです。
 これでは、コンテナからホストの情報が見えてしまっているためよくありません。
 そこで登場するのが@<b>{pivot_root}@<fn>{pivot_root}です。
 
