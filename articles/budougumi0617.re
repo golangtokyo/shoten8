@@ -11,11 +11,6 @@
 
 == @<kw>{SOLIDの原則}（@<tti>{the SOLID principles}）
 SOLIDの原則は次の用語リストに挙げた5つのソフトウェア設計の原則の頭文字をまとめたものです。
-これらの原則は、ソフトウェアをより理解しやすく、より柔軟でメンテナンス性の高いものにするために@<i>{Robert C. Martin}によって考案されました。
-書籍としては、「アジャイルソフトウェア開発の奥義」@<fn>{amzn_agile}でまとめられたのが最初です。
-
-//footnote[amzn_agile][@<href>{https://www.amazon.co.jp/dp/4797347783}]
-
 
 #@# textlint-disable
  : @<kw>{単一責任の原則}（@<kw>{SRP}, @<tti>{Single responsibility principle}）
@@ -30,13 +25,20 @@ SOLIDの原則は次の用語リストに挙げた5つのソフトウェア設�
     上位のモジュールは下位のモジュールに依存してはならない。どちらのモジュールも「抽象」に依存すべきである。「抽象」は実装の詳細に依存してはならない。実装の詳細が「抽象」に依存すべきである。@<fn>{agile_dip}
 #@# textlint-enable
 
-
-
 //footnote[agile_srp][アジャイルソフトウェア開発の奥義 第2版 8.1より]
 //footnote[agile_ocp][アジャイルソフトウェア開発の奥義 第2版 9.1より]
 //footnote[agile_lsp][アジャイルソフトウェア開発の奥義 第2版 10.1より]
 //footnote[agile_isp][アジャイルソフトウェア開発の奥義 第2版 12.3より]
 //footnote[agile_dip][アジャイルソフトウェア開発の奥義 第2版 11.1より]
+
+これらの原則は、ソフトウェアをより理解しやすく、より柔軟でメンテナンス性の高いものにする目的で考案されました。
+各々の原則の考案者は違いますが、@<i>{Robert C. Martin}によって@<kw>{SOLIDの原則}として5つの原則がまとめられました@<fn>{getting_a_slid_start}。
+SOLIDの原則の原型は1995年時点で存在していたことが、@<i>{Robert C. Martin}がコメントしたメーリングリストの情報からも読み取れます@<fn>{ttc_of_oop}。
+SOLIDの原則を日本語書籍の原典から学びたい場合は、「アジャイルソフトウェア開発の奥義」@<fn>{amzn_agile}になります。
+
+//footnote[getting_a_slid_start][@<href>{https://sites.google.com/site/unclebobconsultingllc/getting-a-solid-start}]
+//footnote[ttc_of_oop][@<href>{https://groups.google.com/forum/m/#!msg/comp.object/WICPDcXAMG8/EbGa2Vt-7q0J}]
+//footnote[amzn_agile][@<href>{https://www.amazon.co.jp/dp/4797347783}]
 
 == Goとオブジェクト指向プログラミング
 本題へ入る前に、Goとオブジェクト指向プログラミングの関係を考えてみます。
