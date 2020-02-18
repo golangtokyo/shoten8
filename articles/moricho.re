@@ -90,7 +90,7 @@ Linuxには、プロセスごとにリソースを分離して提供する「Nam
 
 //list[namespace1][Namespaceの分離][go]{
 func main() {
-    cmd := exec.Command("/bin/sh")
+  cmd := exec.Command("/bin/sh")
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags: unix.CLONE_NEWUSER |
 			unix.CLONE_NEWNET |
@@ -117,9 +117,9 @@ func main() {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-    cmd.Env = []string{"PS1=[child-process] # "}
+  cmd.Env = []string{"PS1=-[shoten]- # "}
 
-    if err := cmd.Run(); err != nil {
+  if err := cmd.Run(); err != nil {
 		fmt.Printf("Error running the /bin/sh command - %s\n", err)
 		os.Exit(1)
 	}
@@ -131,9 +131,9 @@ func main() {
 //list[namespace2][実行結果][]{
 $ go build
 $ ./main
-[child-process] # whoami
+-[shoten]- # whoami
 root
-[child-process] # id
+-[shoten]- # id
 uid=0(root) gid=0(root) groups=0(root)
 //}
 
@@ -183,12 +183,27 @@ Goでは@<code>{syscall.SysProcAttr}に@<code>{UidMappings}と@<code>{GidMapping
 上の例ではrootユーザーとして新たなプロセスを実行しています。
 
 === 2.ファイルシステムの隔離 〜pivot_root〜
-ファイル。
+前項までで、マウント名前空間（CLONE_NEWNSフラッグで指定したもの）含む各名前空間を分離したプロセスを起動するところまでやりました。
+前項のスクリプトを実行し、起動したプロセスに入った状態でプロセス内で何がマウントされているか見てましょう。
+
+//list[mount1][実行結果][]{
+-[shoten]- # cat /proc/mounts
+/dev/xvda1 / ext4 rw,relatime,discard,data=ordered 0 0
+udev /dev devtmpfs rw,nosuid,relatime,size=491524k,nr_inodes=122881,mode=755 0 0
+devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=000 0 0
+...
+//}
+
+マウント空間を分離したはずなのに、ホストでマウントされている多くのマウントの情報を見ることができてしまいます。
+@<href>{http://man7.org/linux/man-pages/man7/mount_namespaces.7.html, mount_namespaces（7）}を見るとわかりますが、CLONE_NEWNSフラッグ付きで@<code>{clone()}が呼ばれた場合、呼び出し元のマウントポイントのリストが新たなプロセスのそれにコピーされる仕様になっています。
+これでは、コンテナからホストの情報が見えてしまっているためよくありません。
+そこで登場するのが@<code>{pivot_root}です。
+
+Linuxには、プロセスのルートファイルシステムを変更する@<code>{pivot_root}という機能があります。
+引数として@<code>{new_root}と@<code>{put_old}を取り、呼び出し元のプロセスのルートファイルシステムを@<code>{put_old}ディレクトリに移動させ、@<code>{new_root}を呼び出し元のプロセスの新しいルートファイルシステムにします。
+
 
 === 3.ハードウェアリソースの制限 〜cgroup〜
-文。
-
-== GoでCLI作成
 文。
 
 == 自作コンテナをさらに拡張する
