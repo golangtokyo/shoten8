@@ -89,7 +89,6 @@ Linuxには、プロセスごとにリソースを分離して提供する@<tt>{
 
 注意として、Namespacesはあくまでもプロセス間のカーネルリソースを隔離しているのであって、ホストのハードウェアリソース（CPUやメモリなど）へのアクセスを制限しているわけではありません。
 ハードウェアリソースの制限は、後に紹介する「cgroups」という機能によって実現されます。
-
 それでは実際に、各Namespaceを分離した新たな子プロセスを生成してみましょう。
 
 //list[namespace1][Namespaceの分離：main.go][go]{
@@ -182,7 +181,7 @@ cmd.SysProcAttr = &syscall.SysProcAttr{
 }
 //}
 
-ここでは、ホストのユーザー名前空間と新たに分離したユーザー名前空間におけるUID/GIDのマッピングを行っています。
+@<list>{namespace4}では、ホストのユーザー名前空間と新たに分離したユーザー名前空間におけるUID/GIDのマッピングを行っています。
 なぜこうするのかというと、単にユーザー名前空間を分離しただけでは起動後のプロセス内でユーザー/グループが@<code>{nobody/nogroup}となってしまうからです。
 新しいユーザー名前空間で実行されるプロセスのUID/GIDを設定するためには、@<code>{/proc/[pid]/uid_map}と@<code>{/proc/[pid]/gid_map}に対して書き込みを行います。
 Goでは@<code>{syscall.SysProcAttr}に@<code>{UidMappings}と@<code>{GidMappings}を設定することでこれをやってくれます。
@@ -284,7 +283,6 @@ func pivotRoot(newroot string) error {
 またマウントは通常、ディレクトリツリーをブロックデバイスの領域に紐付けるために行われます。
 それに対し「バインドマウント」は、ディレクトリをディレクトリにマウントします。
 今回は@<code>{new_root}を@<code>{new_root}でマウントすることで、@<code>{new_root}以下の階層の内容はそのままに、@<code>{new_root}を新たなマウントポイントとしたファイルシステムとして認識させています。
-
 そしてこの後に@<code>{pivot_root}を行うことで、新たに@<code>{new_root}がファイルシステムのルートになり、その上位階層（ホストのディレクトリ）は見ることができなくなります。
 また@<code>{pivot_root}では元のファイルシステムが@<code>{put_old}をマウントポイントとしてマウントされるため、コンテナにホストの情報が残ったままになってしまいます。これを回避するために、続いて@<code>{put_old}をアンマウントしてから削除しています。
 
@@ -345,7 +343,6 @@ func main() {
 この関数内の@<code>{newrootPath}は、@<tt>{InitContainer}コマンドの引数として渡ってくる予定のものです。
 まずこの@<code>{newrootPath}を、@<list>{mount2}で実装した@<code>{pivotRoot()}に渡し、@<tt>{pivot_root}を行っています。
 そして@<code>{InitContainer()}の最後には、@<code>{Run()}で今までどおり@<code>{exec.Cmd}から@<code>{/bin/sh}を実行しています。
-
 では最後に@<code>{main()}を見ていきましょう。
 
 //list[mount4][reexecを使ったコード２：main.go][go]{
