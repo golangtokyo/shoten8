@@ -133,16 +133,15 @@ func Hello(p Person) {
 //footnote[embedded][@<href>{https://golang.org/ref/spec#Struct_types}]
 
 
-==[column] 実装よりもコンポジションを選ぶ
+===[column] 実装よりもコンポジションを選ぶ
 あるクラスが他の具象クラス（抽象クラス）を拡張した場合の継承を、@<tt>{Java}の世界では@<kw>{実装継承}（@<i>{implemebtation inheritance}）と呼びます。
 あるクラスがインターフェースを実装した場合や、インターフェースが他のインターフェースを拡張した場合の継承を@<kw>{インターフェース継承}（@<i>{interface inheritance}）と呼びます。
 Goがサポートしている継承はJavaの言い方を借りるならば@<kw>{インターフェース継承}のみです。
 クラスの親子関係による@<kw>{実装継承}はカプセル化を破壊する危険も大きく、深い継承構造はクラスの構成把握を困難にするという欠点もあります。
-このことは代表的なオブジェクト指向言語である@<kw>{Java}の名著、「@<kw>{Effective Java}」@<fn>{amzn_java}@<fn>{effective_java}の「@<kw>{項目16 継承よりコンポジションを選ぶ}」でも言及されています。
+このことは代表的なオブジェクト指向言語である@<kw>{Java}の名著、「@<kw>{Effective Java}」の「@<kw>{項目16 継承よりコンポジションを選ぶ}」でも言及されています（筆者が所有している@<kw>{Effective Java}は第2版ですが、2018年に@<tt>{Java 9}対応の<kw>{Effective Java 第3版}が発売されています）。
 Goが@<kw>{実装継承}をサポートしなかった理由は明らかになっていませんが、筆者は以上の危険性があるためサポートされていないと考えています。
 
-//footnote[amzn_java][@<href>{https://www.amazon.co.jp/dp/4621066056}]
-//footnote[effective_java][筆者が所有している@<kw>{Effective Java}は第2版ですが、2018年に@<tt>{Java 9}対応の<kw>{Effective Java 第3版}が発売されています。]
+===[/column]
 
 == ここから書けていない。
 
@@ -191,8 +190,10 @@ Illegitimate Injectionパターン。
 == 参考文献
  * アジャイルソフトウェア開発の奥義 第2版 オブジェクト指向開発の神髄と匠の技
  ** @<href>{https://www.amazon.co.jp/dp/4797347783}
- * Clean Code　アジャイルソフトウェア達人の技
- ** @<href>{https://www.amazon.co.jp/dp/B078HYWY5X}
+ * Effective Java 第3版
+ ** @<href>{https://www.amazon.co.jp/dp/B07RHX1K53}
+ * Clean Architecture　達人に学ぶソフトウェアの構造と設計
+ ** @<href>{https://www.amazon.co.jp/dp/B07FSBHS2V}
  * C#実践開発手法　デザインパターンとSOLID原則によるアジャイルなコーディング
  ** @<href>{https://www.amazon.co.jp/dp/B010A8WHFC}
  * Adaptive Code ~ C#実践開発手法　第2版
