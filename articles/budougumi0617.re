@@ -1,15 +1,16 @@
 = GoにおけるSOLID
 
-@<tt>{@budougumi0617}です。
+@<tt>{@budougumi0617}@<fn>{bd617_twitter}です。
 #@# textlint-disable
-オブジェクト指向設計の原則として@<kw>{SOLIDの原則}@<fn>{solid}（@<tti>{the SOLID principles}）があることはみなさんご存じかと思います。
+オブジェクト指向設計の原則を5つまとめた@<kw>{SOLIDの原則}@<fn>{solid}（@<tti>{the SOLID principles}）という設計指針があることはみなさんご存じかと思います。
 #@# textlint-enable
 本章ではSOLIDの原則にのっとったGoの実装について考えます。
 
+//footnote[bd617_twitter][@<href>{https://twitter.com/budougumi0617}]
 //footnote[solid][@<href>{https://ja.wikipedia.org/wiki/SOLID}]
 
 
-== @<kw>{SOLIDの原則}（@<tti>{the SOLID principles}）
+== @<kw>{SOLIDの原則}（@<tti>{the SOLID principles}）とは
 SOLIDの原則は次の用語リストに挙げた5つのソフトウェア設計の原則の頭文字をまとめたものです。
 
 #@# textlint-disable
@@ -32,13 +33,16 @@ SOLIDの原則は次の用語リストに挙げた5つのソフトウェア設�
 //footnote[agile_dip][アジャイルソフトウェア開発の奥義 第2版 11.1より]
 
 これらの原則は、ソフトウェアをより理解しやすく、より柔軟でメンテナンス性の高いものにする目的で考案されました。
-各々の原則の考案者は違いますが、@<i>{Robert C. Martin}によって@<kw>{SOLIDの原則}として5つの原則がまとめられました@<fn>{getting_a_slid_start}。
-SOLIDの原則の原型は1995年時点で存在していたことが、@<i>{Robert C. Martin}がコメントしたメーリングリストの情報からも読み取れます@<fn>{ttc_of_oop}。
-SOLIDの原則を日本語書籍の原典から学びたい場合は、「アジャイルソフトウェア開発の奥義」@<fn>{amzn_agile}になります。
+各々の原則の原案者や発表時期は異なりますが、この5つの原則から頭文字のアルファベットを1つずつ取り@<tt>{SOLIDの原則}としてまとめたのが@<i>{Robert C. Martin}です。@<fn>{getting_a_slid_start}。
+メーリングリストに投稿された@<i>{Robert C. Martin}のコメント@<fn>{ttc_of_oop}を見ると、1995年時点でオープンクローズドの原則（@<tt>{The open/closed principle}）などの命名がされていることがわかります。
+また、SOLIDの原則として5つの原則がまとめて掲載された日本語書籍は、「アジャイルソフトウェア開発の奥義」@<fn>{amzn_agile}になります。
+SOLIDの原則自体についてもっと知りたい場合は、@<tt>{@nazonohito51}さんの「@<tt>{「SOLIDの原則って何ですか？」って質問に答えたかった}@<fn>{whats-solid-principle}」を読んでみるとよいでしょう。
 
 //footnote[getting_a_slid_start][@<href>{https://sites.google.com/site/unclebobconsultingllc/getting-a-solid-start}]
 //footnote[ttc_of_oop][@<href>{https://groups.google.com/forum/m/#!msg/comp.object/WICPDcXAMG8/EbGa2Vt-7q0J}]
 //footnote[amzn_agile][@<href>{https://www.amazon.co.jp/dp/4797347783}]
+//footnote[nazonohito51][https://twitter.com/nazonohito51]
+//footnote[whats-solid-principle][https://speakerdeck.com/nazonohito51/whats-solid-principle]
 
 == Goとオブジェクト指向プログラミング
 本題へ入る前に、Goとオブジェクト指向プログラミングの関係を考えてみます。
