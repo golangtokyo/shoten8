@@ -41,22 +41,22 @@ SOLIDの原則自体についてもっと知りたい場合は、@<tt>{@nazonohi
 //footnote[getting_a_slid_start][@<href>{https://sites.google.com/site/unclebobconsultingllc/getting-a-solid-start}]
 //footnote[ttc_of_oop][@<href>{https://groups.google.com/forum/m/#!msg/comp.object/WICPDcXAMG8/EbGa2Vt-7q0J}]
 //footnote[amzn_agile][@<href>{https://www.amazon.co.jp/dp/4797347783}]
-//footnote[nazonohito51][https://twitter.com/nazonohito51]
-//footnote[whats-solid-principle][https://speakerdeck.com/nazonohito51/whats-solid-principle]
+//footnote[nazonohito51][@<href>{https://twitter.com/nazonohito51}]
+//footnote[whats-solid-principle][@<href>{https://speakerdeck.com/nazonohito51/whats-solid-principle}]
 
 == Goとオブジェクト指向プログラミング
 本題へ入る前に、Goとオブジェクト指向プログラミングの関係を考えてみます。
 そもそもオブジェクト指向に準拠したプログラミング言語であることの条件とは何でしょうか。
 さまざまな主張はありますが、本章では次の3大要素を備えることが「オブジェクト指向に準拠したプログラミング言語であること」とします。
 
- 1. カプセル化（@<tt>{Encapsulation}）
- 2. 多態性（ポリモフィズム）（@<tt>{Polymorphism}）
- 3. 継承（@<tt>{Inheritance})
+ 1. カプセル化（@<i>{Encapsulation}）
+ 2. 多態性（ポリモフィズム）（@<i>{Polymorphism}）
+ 3. 継承（@<i>{Inheritance})
 
 
 #@# textlint-disable
-Go公式サイトには@<kw>{Frequently Asked Questions (FAQ)}@<fn>{q_and_a}という「よくある質問と答え」ページがあります。
-この中の@<i>{Is Go an object-oriented language?}（Goはオブジェクト指向言語ですか？）という質問で、公式見解が述べられています。
+ではGoはオブジェクト指向言語なのでしょうか。Go公式サイトには@<kw>{Frequently Asked Questions (FAQ)}@<fn>{q_and_a}という「よくある質問と答え」ページがあります。
+この中の@<i>{Is Go an object-oriented language?}（Goはオブジェクト指向言語ですか？）という質問に対する答えとして、次の公式見解が記載されています。
 #@# textlint-enable
 
 //quote{
@@ -67,18 +67,76 @@ Also, the lack of a type hierarchy makes “objects” in Go feel much more ligh
 
 //footnote[q_and_a][@<href>{https://golang.org/doc/faq#Is_Go_an_object-oriented_language}]
 
-非常にあいまいな回答にはなっていますが、Goはオブジェクト指向の3大要素を一部しか取り入れていないため、このような回答になっています。
-オブジェクト指向言語に期待されるで仕組みの1つとして、クラスの階層構造による継承があります。
-Goはそのような継承の仕組みを言語仕様としてサポートしていません。
-埋込み型による疑似継承のアプローチもありますが、これは多態性や共変性、反変性を満たさないのでオブジェクト指向で期待される@<kw>{実装継承}（@<i>{Implemebtation inheritance}）ではなくコンポジションにすぎません。
-#@# できたらここで代入できないサンプルコードを書く。
-そのため、@<kw>{リスコフの置換原則}などの一部のSOLIDの原則をそのままGoに適用することはできません。
+あいまいな回答にはなっていますが、「Yesであり、Noでもある。」という回答です。
+Goはオブジェクト指向の3大要素を一部しか取り入れていないため、このような回答になっています。
+
+=== Goはサブクラシング（@<tti>{subclassing}）に対応していない
+多くの方がオブジェクト指向言語に期待する仕組みの1つとして、先ほど引用した回答内にもある@<kw>{サブクラシング}（@<i>{subclassing}）が挙げられるでしょう。
+もっと平易な言葉で言い直すと、クラス（型）の階層構造（親子関係）による継承です。
+代表的なオブジェクト指向言語である@<tt>{Java}でサブクラシングの例に上げると、@<list>{person}のような親となる@<code>{Person}クラスと子となる@<code>{Japanese}クラスです。
+
+//list[person][Javaで表現されたPersonクラスを継承するJapaneseクラス][c#]{
+class Person {
+  String name;
+  int age;
+}
+
+// Personクラスを継承したJapaneseクラス
+class Japanese extends Person {
+  int myNumber;
+}
+
+class Main {
+  // Personクラスを引数にとるメソッド
+  public static void Hello(Person p) {
+    System.out.println("Hello " + p.name);
+  }
+}
+//}
+
+@<code>{Person}クラスを継承した@<code>{Japanese}クラスのオブジェクトは、ポリモフィズムによって@<code>{Person}変数に代入できます。
+また、同様に@<code>{Person}クラスのオブジェクトを引数にとるメソッドに対して代入することもできます（@<list>{person2}）。
+
+//list[person2][Javaにおけるクラス継承を利用したポリモフィズムな代入と呼び出し]{
+Japanese japanese = new Japanese();
+person.name = "budougumi0617";
+Person person = japanese;
+Main.Hello(japanese);
+//}
+
+このような継承関係（ポリモフィズム）を表現するとき、Goはインターフェースを使うでしょう。
+Goは@<list>{person}のような実像クラス（あるいは抽象クラス）を親とするようなサブクラシングによる継承の仕組みを言語仕様としてサポートしていません。
+Goでは埋込み@<fn>{embedded}を使って別の方に実装を埋め込むアプローチもありますが、これは多態性や共変性、反変性@<fn>{convariance}を満たさないのでオブジェクト指向で期待される継承ではなくコンポジションにすぎません。
+@<list>{go_person}は@<list>{person}をGoで書き直したものです。
+この例では、@<code>{Japanese}型のオブジェクトは@<code>{Hello}関数に利用することはできません。
+
+//list[go_person][Goで@<list>{person}のような親子関係を表現する場合]{
+type Person struct {
+  Name string
+  Age  int
+}
+
+// Personを埋め込んだJapanese型。
+type Japanese struct {
+  Person
+  MyNumber int
+}
+
+func Hello(p Person) {
+  fmt.Println("Hello " + p.Name)
+}
+//}
+以上の例以外にも、@<kw>{リスコフの置換原則}などの一部のSOLIDの原則をそのままGoに適用することはできません。
 しかし、SOLIDの原則のベースとなる考えを取り入れることでよりシンプルで可用性の高いGoのコードを書くことは可能です。
 
-==[column] 実装継承（@<i>{implemebtation inheritance}）について
-あるクラスが他のクラスを拡張した場合の継承を@<kw>{実装継承}（@<i>{implemebtation inheritance}）と呼びます。
+//footnote[convariance][@<href>{https://docs.microsoft.com/ja-jp/dotnet/csharp/programming-guide/concepts/covariance-contravariance/}]
+//footnote[embedded][@<href>{https://golang.org/ref/spec#Struct_types}]
+
+
+==[column] 実装よりもコンポジションを選ぶ
+あるクラスが他の具象クラス（抽象クラス）を拡張した場合の継承を、@<tt>{Java}の世界では@<kw>{実装継承}（@<i>{implemebtation inheritance}）と呼びます。
 あるクラスがインターフェースを実装した場合や、インターフェースが他のインターフェースを拡張した場合の継承を@<kw>{インターフェース継承}（@<i>{interface inheritance}）と呼びます。
-Goがサポートしている継承は@<kw>{インターフェース継承}のみです。
+Goがサポートしている継承はJavaの言い方を借りるならば@<kw>{インターフェース継承}のみです。
 クラスの親子関係による@<kw>{実装継承}はカプセル化を破壊する危険も大きく、深い継承構造はクラスの構成把握を困難にするという欠点もあります。
 このことは代表的なオブジェクト指向言語である@<kw>{Java}の名著、「@<kw>{Effective Java}」@<fn>{amzn_java}@<fn>{effective_java}の「@<kw>{項目16 継承よりコンポジションを選ぶ}」でも言及されています。
 Goが@<kw>{実装継承}をサポートしなかった理由は明らかになっていませんが、筆者は以上の危険性があるためサポートされていないと考えています。
