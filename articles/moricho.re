@@ -422,7 +422,85 @@ proc /proc proc rw,relatime 0 0
 
 
 === ハードウェアリソースの制限
-文。
+前項までを通して、ユーザー・グループやファイルシステムなどのリソースが分離されたプロセスを作成することができました。
+しかし、そのプロセスはまだCPUやメモリなどのハードウェアリソースに対して制限なくアクセスできる状態です。
+１つのコンテナがホストのCPUやメモリを食い尽くしてしまい、他のホストプロセスやコンテナに影響があると困りますよね。
+
+そこで登場するのが@<code>{cgroups}@<fn>{cgroups}です。
+@<tt>{cgroups}は@<tt>{control groups}の略です。プロセスのグループ化や、グループ内のプロセスに対するリソース制御などの仕組みを提供しています。
+@<tt>{namespaces}では名前空間の隔離を通してカーネルリソースを制御していたのに対し、@<tt>{cgroups}ではCPUやメモリ、ディスクI/Oといった物理的なリソースを制御します。
+
+//footnote[cgroups][@<href>{http://man7.org/linux/man-pages/man7/cgroups.7.html}]
+
+@<tt>{cgroups}では@<tt>{/sys/fs/cgroup}配下に仮装的なファイルシステムを提供しています。
+このファイルシステムに対して読み込み・書き込みの操作を行うことで、グループに対してリソースの利用に制限をかけることが可能になっています。
+
+試しに@<tt>{Ubuntu16.04}上で@<code>{ls /sys/fs/cgroup}を実行してみます。
+
+//list[cgroup1][ls /sys/fs/cgroup の実行結果][]{
+$ ls /sys/fs/cgroup
+blkio  cpu  cpu,cpuacct  cpuacct  cpuset  devices  freezer  hugetlb  memory
+net_cls  net_cls,net_prio  net_prio  perf_event  pids  rdma  systemd  unified
+//}
+
+@<tt>{cpu}や@<tt>{memory}など、わかりやすくリソースごとにディレクトリが別れています。
+この@<tt>{cpu}や@<tt>{memory}ディレクトリの配下に新たにディレクトリを作成することで、そのディレクトリ名単位でのcgroupが作られます。
+実際に、@<code>{/sys/fs/cgroup/cpu}配下に@<code>{shoten}というCPUレベルでの@<tt>{cgroup}を作成してみましょう。
+さらに@<code>{/sys/fs/cgroup/cpu}をのぞいてみましょう。
+
+//list[cgroup2][/sys/fs/cgroup/cpu/shoten][]{
+$ mkdir /sys/fs/cgroup/cpu/shoten
+$ ls /sys/fs/cgroup/cpu/shoten
+cgroup.clone_children  cpu.cfs_period_us  cpu.shares  cpuacct.stat   cpuacct.usage_all     cpuacct.usage_percpu_sys   cpuacct.usage_sys   notify_on_release
+cgroup.procs           cpu.cfs_quota_us   cpu.stat    cpuacct.usage  cpuacct.usage_percpu  cpuacct.usage_percpu_user  cpuacct.usage_user  tasks
+//}
+
+@<list>{cgroup2}を見ると、CPUに関するさまざまな設定ファイルが作成されているのがわかります。
+たとえばCPU使用率を制限する場合は@<code>{cpu.cfs_quota_us}に書き込みを行います。
+@<code>{cpu.cfs_quota_us}では、100000マイクロ秒間あたりにいくらCPUを利用できるかという値を設定します。
+プロセスのCPU使用率を５％に制限したい場合は、@<tt>{5000}という値を@<code>{cpu.cfs_quota_us}に書き込むだけです。
+
+また、@<code>{/sys/fs/cgroup/cpu/shoten}内でもう１つ重要なファイルが@<code>{tasks}です。
+このファイル内では、どのプロセスをこのcontrol groupに入れるかを管理しています。
+複数プロセス入れることもできますが、本項ではコンテナとなるプロセス自身のみを設定しましょう。
+
+ではコードを見ていきます。
+
+//list[cgroup3][cgroupの実装][go]{
+  func cgroup() error {
+  	if err := os.MkdirAll("/sys/fs/cgroup/cpu/shoten", 0700); err != nil {
+  		return fmt.Errorf("Cgroups namespace shoten create failed: %w", err)
+  	}
+
+  	if err := ioutil.WriteFile(
+  		"/sys/fs/cgroup/cpu/shoten/tasks",
+  		[]byte(fmt.Sprintf("%d\n", os.Getpid())),
+  		0644,
+  	); err != nil {
+  		return fmt.Errorf("Cgroups register tasks to shoten namespace failed: %w", err)
+  	}
+
+  	if err := ioutil.WriteFile(
+  		"/sys/fs/cgroup/cpu/shoten/cpu.cfs_quota_us",
+  		[]byte("5000\n"),
+  		0644,
+  	); err != nil {
+  		return fmt.Errorf("Cgroups add limit cpu.cfs_quota_us to 5000 failed: %w", err)
+  	}
+
+  	return nil
+  }
+//}
+
+とてもシンプルです。
+
+ * @<code>{/sys/fs/cgroup/cpu/shoten}ディレクトリを作成
+ * @<code>{tasks}ファイルに自身のPIDを書き込み
+ * @<code>{cpu.cfs_quota_us}にCPU使用率が５％になるように5000という数字の書き込み
+
+を行っています。
+
+
 
 == 自作コンテナをさらに拡張する
 文。
