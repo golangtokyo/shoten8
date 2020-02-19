@@ -233,6 +233,7 @@ devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=5,\
 
 の４つです。
 これらを考慮して@<code>{pivot_root}を実装しましょう。
+
 //list[mount2][pivot_rootの実装][go]{
 func pivotRoot(newroot string) error {
 	putold := filepath.Join(newroot, "/oldrootfs")
@@ -272,6 +273,7 @@ func pivotRoot(newroot string) error {
 	return nil
 }
 //}
+
 流れは次のようになっています。
  1. new_rootでnew_root自身をバインドマウント
  2. pivot_rootを実行
@@ -291,7 +293,7 @@ func pivotRoot(newroot string) error {
 しかし@<list>{namespace1}で見たように、一度@<code>{cmd.Run()}が呼ばれたら名前空間が分離され、そしてプロセスが実行されてしまいます。
 ここをうまく解決してくれるのが@<code>{reexec}パッケージです。
 
-== reexecパッケージ
+=== reexecパッケージ
 @<code>{reexec}パッケージ@<fn>{reexec}は、OSS版Dockerの開発を進めるMobyプロジェクト@<fn>{moby}から提供されています。
 さっそく、@<code>{reexec}を使って@<list>{namespace1}をアップデートしたコードを見てましょう。
 
@@ -395,6 +397,7 @@ func main() {
 新たに@<code>{cmd := reexec.Command("InitContainer", rootfsPath)}として、@<list>{mount3}で登録した@<code>{InitContainer}コマンドを呼んでいるのがわかります。
 それ以外は@<list>{namespace1}とほとんど変わらず、@<code>{cmd}に対して@<code>{Cloneflags}や@<code>{Uid/GidMappings}の設定をしています。
 では、@<list>{mount3}、@<list>{mount4}で見た新たな@<tt>{main.go}を実行してみましょう。
+
 //list[mount5][実行結果][]{
 $ go build -o main
 $ ./main
@@ -402,6 +405,7 @@ $ ./main
 /dev/xvda1 / ext4 rw,relatime,discard,data=ordered 0 0
 proc /proc proc rw,relatime 0 0
 //}
+
 @<list>{mount1}とは違い、限られたマウントポイントしか存在していないことがわかります。
 
 //footnote[reexec][@<href>{https://github.com/moby/moby/tree/master/pkg/reexec}]
