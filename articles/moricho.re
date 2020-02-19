@@ -206,15 +206,12 @@ devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=5,\
 
 マウント空間を分離したはずなのに、ホストでマウントされている多くのマウントの情報を見ることができてしまいます。
 @<code>{mount_namespaces}@<fn>{mount_namespaces}のmanページを見ると、それがなぜだかわかります。
-
-//footnote[mount_namespaces][@<href>{http://man7.org/linux/man-pages/man7/mount_namespaces.7.html}]
-
 @<code>{CLONE_NEWNS}フラグ付きで@<code>{clone()}が呼ばれた場合、呼び出し元のマウントポイントのリストが新たなプロセスへコピーされる仕様になっているのです。
 これでは、コンテナからホストの情報が見えてしまっているためよくありません。
 そこで登場するのが@<b>{pivot_root}@<fn>{pivot_root}です。
-
 @<code>{pivot_root}について説明するにあたって、まずはファイルシステムについておさらいしましょう。
 
+//footnote[mount_namespaces][@<href>{http://man7.org/linux/man-pages/man7/mount_namespaces.7.html}]
 //footnote[pivot_root][@<href>{https://linuxjm.osdn.jp/html/LDP_man-pages/man2/pivot_root.2.html}]
 
 === ファイルシステムとは
@@ -227,7 +224,6 @@ devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=5,\
 @<code>{pivot_root}とは、プロセスのルートファイルシステムを変更するLinuxの機能です。
 @<code>{pivot_root}は引数として@<code>{new_root}と@<code>{put_old}を取ります。
 呼び出し元のプロセスのルートファイルシステムを@<code>{put_old}ディレクトリに移動させ、@<code>{new_root}を呼び出し元のプロセスの新しいルートファイルシステムにします。
-
 また@<code>{pivot_root}には、new_rootとput_oldに関して制約があります。
 
  * ディレクトリでなければならない
@@ -236,7 +232,6 @@ devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=5,\
  * ほかのファイルシステムがput_oldにマウントされていてはならない
 
 の４つです。
-
 これらを考慮して@<code>{pivot_root}を実装しましょう。
 
 //list[mount2][pivot_rootの実装][go]{
@@ -299,7 +294,7 @@ func pivotRoot(newroot string) error {
 しかし@<list>{namespace1}で見たように、一度@<code>{cmd.Run()}が呼ばれたら名前空間が分離され、そしてプロセスが実行されてしまいます。
 ここをうまく解決してくれるのが@<code>{reexec}パッケージです。
 
-=== reexecパッケージ
+== reexecパッケージ
 @<code>{reexec}パッケージ@<fn>{reexec}は、OSS版Dockerの開発を進めるMobyプロジェクト@<fn>{moby}から提供されています。
 さっそく、@<code>{reexec}を使って@<list>{namespace1}をアップデートしたコードを見てましょう。
 
