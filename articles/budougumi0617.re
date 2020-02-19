@@ -72,8 +72,9 @@ Goはオブジェクト指向の3大要素を一部しか取り入れていな�
 
 === Goはサブクラシング（@<tti>{subclassing}）に対応していない
 多くの方がオブジェクト指向言語に期待する仕組みの1つとして、先ほど引用した回答内にもある@<kw>{サブクラシング}（@<i>{subclassing}）が挙げられるでしょう。
-もっと平易な言葉で言い直すと、クラス（型）の階層構造（親子関係）による継承です。
-代表的なオブジェクト指向言語である@<tt>{Java}でサブクラシングの例に上げると、@<list>{person}のような親となる@<code>{Person}クラスと子となる@<code>{Japanese}クラスです。
+もっと平易な言葉で言い直すと、@<tt>{クラス（型）の階層構造（親子関係）による継承}です。
+代表的なオブジェクト指向言語である@<tt>{Java}でサブクラシングの例を書いたコードが@<list>{person}です。
+@<list>{person}は、親となる@<code>{Person}クラスと子となる@<code>{Japanese}クラスの定義と、@<code>{Person}クラスを引数に取るメソッドを含んでいます。
 
 //list[person][Javaで表現されたPersonクラスを継承するJapaneseクラス][c#]{
 class Person {
@@ -106,7 +107,7 @@ Main.Hello(japanese);
 
 このような継承関係（ポリモフィズム）を表現するとき、Goはインターフェースを使うでしょう。
 Goは@<list>{person}のような実像クラス（あるいは抽象クラス）を親とするようなサブクラシングによる継承の仕組みを言語仕様としてサポートしていません。
-Goでは埋込み@<fn>{embedded}を使って別の方に実装を埋め込むアプローチもありますが、これは多態性や共変性、反変性@<fn>{convariance}を満たさないのでオブジェクト指向で期待される継承ではなくコンポジションにすぎません。
+Goでは埋込み（@<i>{Embedding}@<fn>{embedding}）を使って別の型に実装を埋め込むアプローチもありますが、これは多態性や共変性・反変性@<fn>{convariance}を満たさないのでオブジェクト指向で期待される継承ではなくコンポジションにすぎません。
 @<list>{go_person}は@<list>{person}をGoで書き直したものです。
 この例では、@<code>{Japanese}型のオブジェクトは@<code>{Hello}関数に利用することはできません。
 
@@ -129,9 +130,9 @@ func Hello(p Person) {
 以上の例以外にも、@<kw>{リスコフの置換原則}などの一部のSOLIDの原則をそのままGoに適用することはできません。
 しかし、SOLIDの原則のベースとなる考えを取り入れることでよりシンプルで可用性の高いGoのコードを書くことは可能です。
 
-//footnote[convariance][@<href>{https://docs.microsoft.com/ja-jp/dotnet/csharp/programming-guide/concepts/covariance-contravariance/}]
-//footnote[embedded][@<href>{https://golang.org/ref/spec#Struct_types}]
 
+//footnote[convariance][@<href>{https://docs.microsoft.com/ja-jp/dotnet/csharp/programming-guide/concepts/covariance-contravariance/}]
+//footnote[embedding][@<href>{https://golang.org/doc/effective_go.html#embedding}]
 
 ===[column] 実装よりもコンポジションを選ぶ
 あるクラスが他の具象クラス（抽象クラス）を拡張した場合の継承を、@<tt>{Java}の世界では@<kw>{実装継承}（@<i>{implemebtation inheritance}）と呼びます。
