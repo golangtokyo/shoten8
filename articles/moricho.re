@@ -271,7 +271,7 @@ func pivotRoot(newroot string) error {
 しかし@<list>{namespace1}で見たように、一度@<code>{cmd.Run()}が呼ばれたら名前空間が分離され、そしてプロセスが実行されてしまいます。
 ここをうまく解決してくれるのが@<code>{reexec}パッケージです。
 
-==== reexecパッケージ
+=== reexecパッケージ
 
 @<code>{reexec}パッケージ@<fn>{reexec}は、OSS版Dockerの開発を進めるMobyプロジェクト@<fn>{moby}から提供されています。
 さっそく、@<code>{reexec}を使って@<list>{namespace1}をアップデートしたコードを見てましょう。
