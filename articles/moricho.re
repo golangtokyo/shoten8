@@ -5,7 +5,6 @@
 しかしどうやってそのコンテナ型仮想化が実現されているかという内部のことまでは、なかなか触れる機会がありません。
 DockerしかりLambdaしかり、コンテナ技術の中核を成すのが「コンテナランタイム」という部分です。
 本章ではGoを使って実際に簡易的なオリジナルのコンテナランタイムを作成しながら、コンテナ型仮想化の仕組みを見ていきます。本章がコンテナへの理解や探究の一助になれば幸いです。
-
 （本章では開発環境としてLinuxを想定しています。）
 
 //footnote[_moricho_][@<href>{https://twitter.com/_moricho_}]
@@ -61,7 +60,7 @@ OSによってファイルシステムは異なります。コンテナでは、
 
  * ファイルシステムのルート変更/ファイルシステムの隔離
 
-==== 実装
+== 実装
  （ローレベル）コンテナランタイムを作るにあたり私たちが実装するべきものは、大きく次の３つです。
 
   * カーネルリソースの隔離（Namespace）
@@ -70,7 +69,7 @@ OSによってファイルシステムは異なります。コンテナでは、
 
 次節からこれらを詳しく見ていきましょう。
 
-== カーネルリソースの隔離
+=== カーネルリソースの隔離
 Linuxには、プロセスごとにリソースを分離して提供する@<tt>{Namespaces}という機能があります。
 分離できるリソースには次のようなものがあります。
 
@@ -175,7 +174,7 @@ cmd.SysProcAttr = &syscall.SysProcAttr{
 @<list>{namespace4}では、ホストのユーザー名前空間と新たに分離したユーザー名前空間におけるUID/GIDのマッピングを行っています。
 なぜこうするのかというと、単にユーザー名前空間を分離しただけでは起動後のプロセス内でユーザー/グループが@<code>{nobody/nogroup}となってしまうからです。新しいユーザー名前空間で実行されるプロセスのUID/GIDを設定するためには、@<code>{/proc/[pid]/uid_map}と@<code>{/proc/[pid]/gid_map}に対して書き込みを行います。Goでは@<code>{syscall.SysProcAttr}に@<code>{UidMappings}と@<code>{GidMappings}を設定することでこれをやってくれます。@<list>{namespace4}はrootユーザーとして新たなプロセスを実行しています。
 
-== ファイルシステムの隔離
+=== ファイルシステムの隔離
 前節までは、マウント名前空間（@<code>{CLONE_NEWNS}フラグで指定したもの）含む各名前空間を分離したプロセスを起動するところまでやりました。
 前節のスクリプトを実行し、起動したプロセスに入った状態でプロセス内で何がマウントされているか見てましょう。
 
@@ -196,10 +195,10 @@ devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=5,\
 //footnote[mount_namespaces][@<href>{http://man7.org/linux/man-pages/man7/mount_namespaces.7.html}]
 //footnote[pivot_root][@<href>{https://linuxjm.osdn.jp/html/LDP_man-pages/man2/pivot_root.2.html}]
 
-=== ファイルシステムとは
+==== ファイルシステムとは
 ファイルシステムとは、@<b>{ブロックデバイスのデータを構造的に扱う仕組み}のことです。ブロックデバイスはHDDやSSDなどを指します。ブロックデバイスのデータは人が直接扱うには複雑ですが、ファイルシステムがそれらを@<b>{ファイル}や@<b>{ディレクトリ}という形で扱うことを可能にしています。またブロックデバイスのデータを、システム上のディレクトリツリーに対応させることを@<b>{マウント}といいます。
 
-=== pivot_root
+==== pivot_root
 ファイルシステムについて理解したところで、続いてpivot_rootについて説明していきます。@<code>{pivot_root}とは、プロセスのルートファイルシステムを変更するLinuxの機能です。@<code>{pivot_root}は引数として@<code>{new_root}と@<code>{put_old}を取ります。呼び出し元のプロセスのルートファイルシステムを@<code>{put_old}ディレクトリに移動させ、@<code>{new_root}を呼び出し元のプロセスの新しいルートファイルシステムにします。また@<code>{pivot_root}には、new_rootとput_oldに関して制約があります。
 
  * ディレクトリでなければならない
@@ -265,7 +264,7 @@ func pivotRoot(newroot string) error {
 しかし@<list>{namespace1}で見たように、一度@<code>{cmd.Run()}が呼ばれたら名前空間が分離され、そしてプロセスが実行されてしまいます。
 ここをうまく解決してくれるのが@<code>{reexec}パッケージです。
 
-=== reexecパッケージ
+==== reexecパッケージ
 @<code>{reexec}パッケージ@<fn>{reexec}は、OSS版Dockerの開発を進めるMobyプロジェクト@<fn>{moby}から提供されています。
 さっそく、@<code>{reexec}を使って@<list>{namespace1}をアップデートしたコードを見てましょう。
 
@@ -383,7 +382,7 @@ proc /proc proc rw,relatime 0 0
 //footnote[moby][@<href>{https://mobyproject.org/}]
 
 
-== ハードウェアリソースの制限
+=== ハードウェアリソースの制限
 前節までを通して、ユーザー・グループやファイルシステムなどのリソースが分離されたプロセスを作成できました。
 しかし、そのプロセスはまだCPUやメモリなどのハードウェアリソースに対して制限なくアクセスできる状態です。
 １つのコンテナがホストのCPUやメモリを食い尽くしてしまい、ほかのホストプロセスやコンテナに影響があると困りますよね。
@@ -451,6 +450,51 @@ cpuacct.usage_user  tasks
  * @<code>{cpu.cfs_quota_us}にCPU使用率が５％になるように5000という数字の書き込み
 
 を行っています。
+
+ではまた@<code>{reexec}パッケージを使って、@<list>{cgroup3}を適用していきましょう。変更箇所は@<code>{InitContainer()}関数だけです。
+
+//list[cgroup4][InitContainer()の更新][go]{
+func InitContainer() {
+  if err := cgroup(); err != nil {
+		fmt.Printf("Error running cgroup - %s\n", err)
+		os.Exit(1)
+	}
+
+	...
+
+  if err := pivotRoot(newrootPath); err != nil {
+		fmt.Printf("Error running pivot_root - %s\n", err)
+		os.Exit(1)
+	}
+
+	Run()
+}
+//}
+
+前節までの@<code>{pivotRoot()}に加え、@<code>{cgroup()}を追加しました。このとき@<code>{cgroup()}と@<code>{pivotRoot()}の位置関係に注意してください。@<code>{cgroup()}ではホストの@<code>{/sys/fs/cgroup/cpu/shoten}配下にあるファイルへ書き込みを行いたいため、@<code>{pivotRoot()}でルートファイルシステムを変更する前に実行しています。
+
+ではCPU使用率が５％に制限されているか確認してみましょう。まず@<code>{/bin/sh}が実行されたプロセス内で@<code>{while :; do true ; done}を実行し、CPUに負荷をかけます。@<code>{cgroup}で制限してない場合、通常ならCPU使用率が１００％近くになります。
+
+//list[cgroup5][負荷をかける][]{
+$ go build -o main
+$ ./main
+-[shoten]- # while :; do true ; done
+
+//}
+
+では別のセッションに入り@<code>{top}コマンドでCPU使用率を確認してみます。
+
+//list[cgroup6][別セッションでCPU使用率を確認][]{
+	PID USER      PR  NI    VIRT    RES    SHR S %CPU %MEM     TIME+ COMMAND
+20493 root      20   0    8100   2100   1988 R  5.0  0.2   0:02.31 sh
+20270 root      20   0  404360  18924  12840 S  0.3  1.9   0:02.06 ssm-session-wor
+		1 root      20   0  225140   9212   7088 S  0.0  0.9   0:07.44 systemd
+		2 root      20   0       0      0      0 S  0.0  0.0   0:00.00 kthreadd
+...
+//}
+
+見事に５％前後でキープされているのがわかります。
+
 
 == 自作コンテナをさらに拡張する
 文。
