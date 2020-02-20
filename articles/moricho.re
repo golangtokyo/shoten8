@@ -356,7 +356,9 @@ func main() {
 }
 //}
 
-新たに@<code>{cmd := reexec.Command("InitContainer", rootfsPath)}として、@<list>{mount3}で登録した@<code>{InitContainer}コマンドを呼んでいるのがわかります。それ以外は@<list>{namespace1}とほとんど変わらず、@<code>{cmd}に対して@<code>{Cloneflags}や@<code>{Uid/GidMappings}の設定をしています。では、@<list>{mount3}、@<list>{mount4}で見た新たな@<tt>{main.go}を実行してみましょう。
+新たに@<code>{cmd := reexec.Command("InitContainer", rootfsPath)}として、@<list>{mount3}で登録した@<code>{InitContainer}コマンドを呼んでいるのがわかります。それ以外は@<list>{namespace1}とほとんど変わらず、@<code>{cmd}に対して@<code>{Cloneflags}や@<code>{Uid/GidMappings}の設定をしています。また@<list>{mount3}では@<code>{/tmp/shoten/rootfs}を新たなルートファイルシステムとして@<code>{pivot_root}しています。
+
+では、@<list>{mount3}、@<list>{mount4}で作成した新たな@<tt>{main.go}を実行してみましょう。
 
 //list[mount5][実行結果][]{
 $ go build -o main
@@ -371,6 +373,15 @@ proc /proc proc rw,relatime 0 0
 //footnote[reexec][@<href>{https://github.com/moby/moby/tree/master/pkg/reexec}]
 //footnote[moby][@<href>{https://mobyproject.org/}]
 
+=== ベースイメージとなるファイルシステムの展開
+「7.2.4 異なるOSイメージを動かすためのキー」で、こう説明しました。
+
+//quote{
+  コンテナでは、あるOSと同じ状態のファイルシステムをプロセスに対して見せることで、そのOSさながらの環境を実現しています。
+//}
+
+ではいま作っているコンテナのベースイメージはなんでしょうか。
+@<list>{prepare}で@<code>{busybox.tar}を@<code>{/tmp/shoten/rootfs}に展開したことを思い出してください。実は@<code>{busybox.tar}を解凍すると、@<code>{busybox}のルートファイルシステムが展開されます。また前項までを通して見てきたように、ホストの@<code>{/tmp/shoten/rootfs}ディレクトリが起動したプロセスのルートになります。つまり、起動したプロセスは@<code>{busybox}をベースイメージとしたコンテナに相当するのです。
 
 == ハードウェアリソースの制限
 前節までを通して、ユーザー・グループやファイルシステムなどのリソースが分離されたプロセスを作成できました。
@@ -484,7 +495,6 @@ $ ./main
 //}
 
 見事に５％前後でキープされているのがわかります。
-
 
 == 自作コンテナをさらに拡張する
 文。
