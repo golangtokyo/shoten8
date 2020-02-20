@@ -251,17 +251,14 @@ func pivotRoot(newroot string) error {
 //}
 
 流れは次のようになっています。
+
  1. new_rootでnew_root自身をバインドマウント
  2. pivot_rootを実行
  3. 不要になった以前のルートファイルシステムをアンマウント、そしてディレクトリを削除
 
-@<code>{pivot_root}の制約の１つに「new_rootとput_oldは現在のrootと同じファイルシステムにあってはならない」がありました。
-まず@<code>{new_root}を新たなマウントポイントとして@<code>{new_root}自身でバインドマウントすることで、これを満たすようにしています。
-またマウントは通常、ディレクトリツリーをブロックデバイスの領域に紐付けるために行われます。
-それに対し「バインドマウント」は、ディレクトリをディレクトリにマウントします。
-今回は@<code>{new_root}を@<code>{new_root}でマウントすることで、@<code>{new_root}以下の階層の内容はそのままに、@<code>{new_root}を新たなマウントポイントとしたファイルシステムとして認識させています。
-そしてこの後に@<code>{pivot_root}を行うことで、新たに@<code>{new_root}がファイルシステムのルートになり、その上位階層（ホストのディレクトリ）は見ることができなくなります。
-また@<code>{pivot_root}では元のファイルシステムが@<code>{put_old}をマウントポイントとしてマウントされるため、コンテナにホストの情報が残ったままになってしまいます。これを回避するために、続いて@<code>{put_old}をアンマウントしてから削除しています。
+@<code>{pivot_root}の制約の１つに「new_rootとput_oldは現在のrootと同じファイルシステムにあってはならない」がありました。まず@<code>{new_root}を新たなマウントポイントとして@<code>{new_root}自身でバインドマウントすることで、これを満たすようにしています。またマウントは通常、ディレクトリツリーをブロックデバイスの領域に紐付けるために行われます。それに対し「バインドマウント」は、ディレクトリをディレクトリにマウントします。今回は@<code>{new_root}を@<code>{new_root}でマウントすることで、@<code>{new_root}以下の階層の内容はそのままに、@<code>{new_root}を新たなマウントポイントとしたファイルシステムとして認識させています。
+
+そしてこの後に@<code>{pivot_root}を行うことで、新たに@<code>{new_root}がファイルシステムのルートになり、その上位階層（ホストのディレクトリ）は見ることができなくなります。また@<code>{pivot_root}では元のファイルシステムが@<code>{put_old}をマウントポイントとしてマウントされるため、コンテナにホストの情報が残ったままになってしまいます。これを回避するために、続いて@<code>{put_old}をアンマウントしてから削除しています。
 
 では@<list>{mount2}の@<code>{pivot_root}関数はどのタイミングで実行すればよいでしょうか。
 もちろん名前空間が分離された後ですが、分離度の観点から、プロセスが起動し@<code>{/bin/sh}が実行されるよりも前がいいです。
@@ -411,8 +408,11 @@ net_cls  net_cls,net_prio  net_prio  perf_event  pids  rdma  systemd  unified
 //list[cgroup2][/sys/fs/cgroup/cpu/shoten][]{
 $ mkdir /sys/fs/cgroup/cpu/shoten
 $ ls /sys/fs/cgroup/cpu/shoten
-cgroup.clone_children  cpu.cfs_period_us  cpu.shares  cpuacct.stat   cpuacct.usage_all     cpuacct.usage_percpu_sys   cpuacct.usage_sys   notify_on_release
-cgroup.procs           cpu.cfs_quota_us   cpu.stat    cpuacct.usage  cpuacct.usage_percpu  cpuacct.usage_percpu_user  cpuacct.usage_user  tasks
+cgroup.clone_children  cpu.cfs_period_us  cpu.shares  cpuacct.stat
+cpuacct.usage_all     cpuacct.usage_percpu_sys   cpuacct.usage_sys
+notify_on_releasecgroup.procs    cpu.cfs_quota_us   cpu.stat
+cpuacct.usage  cpuacct.usage_percpu  cpuacct.usage_percpu_user
+cpuacct.usage_user  tasks
 //}
 
 @<list>{cgroup2}を見ると、CPUに関するさまざまな設定ファイルが作成されているのがわかります。たとえばCPU使用率を制限する場合は@<code>{cpu.cfs_quota_us}に書き込みを行います。@<code>{cpu.cfs_quota_us}では、100000マイクロ秒間あたりにいくらCPUを利用できるかという値を設定します。プロセスのCPU使用率を５％に制限したい場合は、@<tt>{5000}という値を@<code>{cpu.cfs_quota_us}に書き込むだけです。
@@ -421,7 +421,7 @@ cgroup.procs           cpu.cfs_quota_us   cpu.stat    cpuacct.usage  cpuacct.usa
 //list[cgroup3][cgroupの実装][go]{
   func cgroup() error {
   	if err := os.MkdirAll("/sys/fs/cgroup/cpu/shoten", 0700); err != nil {
-  		return fmt.Errorf("Cgroups namespace shoten create failed: %w", err)
+  		return fmt.Errorf("failed to create directory: %w", err)
   	}
 
   	if err := ioutil.WriteFile(
@@ -429,7 +429,7 @@ cgroup.procs           cpu.cfs_quota_us   cpu.stat    cpuacct.usage  cpuacct.usa
   		[]byte(fmt.Sprintf("%d\n", os.Getpid())),
   		0644,
   	); err != nil {
-  		return fmt.Errorf("Cgroups register tasks to shoten namespace failed: %w", err)
+  		return fmt.Errorf("failed to register tasks: %w", err)
   	}
 
   	if err := ioutil.WriteFile(
@@ -437,7 +437,7 @@ cgroup.procs           cpu.cfs_quota_us   cpu.stat    cpuacct.usage  cpuacct.usa
   		[]byte("5000\n"),
   		0644,
   	); err != nil {
-  		return fmt.Errorf("Cgroups add limit cpu.cfs_quota_us to 5000 failed: %w", err)
+  		return fmt.Errorf("failed to limit cpu.cfs_quota_us: %w", err)
   	}
 
   	return nil
