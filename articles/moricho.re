@@ -81,7 +81,7 @@ Linuxには、プロセスごとにリソースを分離して提供する@<tt>{
  * Network：ネットワークデバイスやIPアドレス
  * IPC：プロセス間通信のリソース
 
-たとえばPID名前空間を分離するとしましょう。そうすると、それぞれのPID名前空間で独立にプロセスIDがふられます。つまり、同一ホスト上で同一のPIDを持ったプロセスが同居しているような状態が作れるのです。このようにして名前空間を分離することにより、「あるコンテナAがコンテナBの重要なファイルシステムを勝手にアンマウントする」、「コンテナCがコンテナDのネットワークインタフェースを削除する」といったこともできなくなります。
+たとえばPID名前空間を分離するとしましょう。そうすると、それぞれのPID名前空間で独立にプロセスIDがふられます。つまり、同一ホスト上で同一のPIDを持ったプロセスが同居しているような状態が作れるのです。このようにして名前空間を分離することで「コンテナAがコンテナBの重要なファイルシステムをアンマウントする」、「コンテナCがコンテナDのネットワークI/Fを削除する」といったこともできなくなります。
 
 注意として、Namespacesはあくまでもプロセス間のカーネルリソースを隔離しているのであって、ホストのハードウェアリソース（CPUやメモリなど）へのアクセスを制限しているわけではありません。ハードウェアリソースの制限は、後に紹介する「cgroups」という機能によって実現されます。それでは実際に、各Namespaceを分離した新たな子プロセスを生成してみましょう。
 
@@ -173,7 +173,7 @@ cmd.SysProcAttr = &syscall.SysProcAttr{
 //}
 
 @<list>{namespace4}では、ホストのユーザー名前空間と新たに分離したユーザー名前空間におけるUID/GIDのマッピングを行っています。
-なぜこうするのかというと、単にユーザー名前空間を分離しただけでは起動後のプロセス内でユーザー/グループが@<code>{nobody/nogroup}となってしまうからです。新しいユーザー名前空間で実行されるプロセスのUID/GIDを設定するためには、@<code>{/proc/[pid]/uid_map}と@<code>{/proc/[pid]/gid_map}に対して書き込みを行います。Goでは@<code>{syscall.SysProcAttr}に@<code>{UidMappings}と@<code>{GidMappings}を設定することでこれをやってくれます。@<list>{namespace4}ではrootユーザーとして新たなプロセスを実行しています。
+なぜこうするのかというと、単にユーザー名前空間を分離しただけでは起動後のプロセス内でユーザー/グループが@<code>{nobody/nogroup}となってしまうからです。新しいユーザー名前空間で実行されるプロセスのUID/GIDを設定するためには、@<code>{/proc/[pid]/uid_map}と@<code>{/proc/[pid]/gid_map}に対して書き込みを行います。Goでは@<code>{syscall.SysProcAttr}に@<code>{UidMappings}と@<code>{GidMappings}を設定することでこれをやってくれます。@<list>{namespace4}はrootユーザーとして新たなプロセスを実行しています。
 
 == ファイルシステムの隔離
 前節までは、マウント名前空間（@<code>{CLONE_NEWNS}フラグで指定したもの）含む各名前空間を分離したプロセスを起動するところまでやりました。
@@ -406,7 +406,7 @@ blkio  cpu  cpu,cpuacct  cpuacct  cpuset  devices  freezer  hugetlb  memory
 net_cls  net_cls,net_prio  net_prio  perf_event  pids  rdma  systemd  unified
 //}
 
-@<tt>{cpu}や@<tt>{memory}など、わかりやすくリソースごとにディレクトリが別れています。この@<tt>{cpu}や@<tt>{memory}ディレクトリの配下に新たにディレクトリを作成することで、そのディレクトリ名単位でのcgroupが作られます。実際に、@<code>{/sys/fs/cgroup/cpu}配下に@<code>{shoten}というCPUレベルでの@<tt>{cgroup}を作成してみましょう。さらに@<code>{/sys/fs/cgroup/cpu}をのぞいてみましょう。
+@<tt>{cpu}や@<tt>{memory}など、わかりやすくリソースごとにディレクトリが別れています。この@<tt>{cpu}や@<tt>{memory}ディレクトリの配下に新たなディレクトリを作成することで、そのディレクトリ名単位でのcgroupが作られます。実際に、@<code>{/sys/fs/cgroup/cpu}配下に@<code>{shoten}というCPUレベルでの@<tt>{cgroup}を作成してみましょう。さらに@<code>{/sys/fs/cgroup/cpu}をのぞいてみましょう。
 
 //list[cgroup2][/sys/fs/cgroup/cpu/shoten][]{
 $ mkdir /sys/fs/cgroup/cpu/shoten
