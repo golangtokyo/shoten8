@@ -406,7 +406,7 @@ blkio  cpu  cpu,cpuacct  cpuacct  cpuset  devices  freezer  hugetlb  memory
 net_cls  net_cls,net_prio  net_prio  perf_event  pids  rdma  systemd  unified
 //}
 
-@<tt>{cpu}や@<tt>{memory}など、わかりやすくリソースごとにディレクトリが別れています。この@<tt>{cpu}や@<tt>{memory}ディレクトリの配下に新たなディレクトリを作成することで、そのディレクトリ名単位でのcgroupが作られます。実際に、@<code>{/sys/fs/cgroup/cpu}配下に@<code>{shoten}というCPUレベルでの@<tt>{cgroup}を作成してみましょう。さらに@<code>{/sys/fs/cgroup/cpu}をのぞいてみましょう。
+@<tt>{cpu}や@<tt>{memory}など、わかりやすくリソースごとにディレクトリが別れています。この@<tt>{cpu}や@<tt>{memory}ディレクトリの配下に新たなディレクトリを作成することで、そのディレクトリ名単位でのcgroupが作られます。それでは@<code>{/sys/fs/cgroup/cpu}配下に@<code>{shoten}というCPUレベルでの@<tt>{cgroup}を作成してみましょう。そして@<code>{/sys/fs/cgroup/cpu/shoten}をのぞいてみます。
 
 //list[cgroup2][/sys/fs/cgroup/cpu/shoten][]{
 $ mkdir /sys/fs/cgroup/cpu/shoten
