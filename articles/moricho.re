@@ -445,13 +445,11 @@ cpuacct.usage_user  tasks
   }
 //}
 
-とてもシンプルです。
+とてもシンプルで、主に次の3つを行っています。
 
  * @<code>{/sys/fs/cgroup/cpu/shoten}ディレクトリを作成
  * @<code>{tasks}ファイルに自身のPIDを書き込み
  * @<code>{cpu.cfs_quota_us}にCPU使用率が５％になるように5000という数字の書き込み
-
-を行っています。
 
 ではまた@<code>{reexec}パッケージを使って、@<list>{cgroup3}を適用していきましょう。変更箇所は@<code>{InitContainer()}関数だけです。
 
