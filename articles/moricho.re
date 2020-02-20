@@ -473,7 +473,7 @@ func InitContainer() {
 
 前節までの@<code>{pivotRoot()}に加え、@<code>{cgroup()}を追加しました。このとき@<code>{cgroup()}と@<code>{pivotRoot()}の位置関係に注意してください。@<code>{cgroup()}ではホストの@<code>{/sys/fs/cgroup/cpu/shoten}配下にあるファイルへ書き込みを行いたいため、@<code>{pivotRoot()}でルートファイルシステムを変更する前に実行しています。
 
-ではCPU使用率が５％に制限されているか確認してみましょう。まず@<code>{/bin/sh}が実行されたプロセス内で@<code>{while :; do true ; done}を実行し、CPUに負荷をかけます。@<code>{cgroup}で制限していない場合、通常ならCPU使用率が100％近くになります。
+ではCPU使用率が５％に制限されているか確認してみましょう。まず@<code>{/bin/sh}が実行されたプロセス内で「@<code>{while :; do true ; done}」を実行し、CPUに負荷をかけます。@<code>{cgroup}で制限していない場合、通常ならCPU使用率が100％近くになります。
 
 //list[cgroup5][負荷をかける][]{
 $ go build -o main
@@ -485,15 +485,15 @@ $ ./main
 では別のセッションに入り@<code>{top}コマンドでCPU使用率を確認してみます。
 
 //list[cgroup6][別セッションでCPU使用率を確認][]{
-	PID USER      PR  NI    VIRT    RES    SHR S %CPU %MEM     TIME+ COMMAND
+PID USER      PR  NI    VIRT    RES    SHR S %CPU %MEM     TIME+ COMMAND
 20493 root      20   0    8100   2100   1988 R  5.0  0.2   0:02.31 sh
 20270 root      20   0  404360  18924  12840 S  0.3  1.9   0:02.06 ssm-session-wor
-		1 root      20   0  225140   9212   7088 S  0.0  0.9   0:07.44 systemd
-		2 root      20   0       0      0      0 S  0.0  0.0   0:00.00 kthreadd
+1 root      20   0  225140   9212   7088 S  0.0  0.9   0:07.44 systemd
+2 root      20   0       0      0      0 S  0.0  0.0   0:00.00 kthreadd
 ...
 //}
 
-見事に５％前後でキープされているのがわかります。
+一番上の@<code>{sh}を実行しているプロセスが該当するものです。見事に５％前後でキープされているのがわかります。
 
 == 自作コンテナをさらに拡張する
 文。
