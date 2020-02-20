@@ -75,7 +75,7 @@ $ mkdir -p /tmp/shoten/rootfs
 $ tar -C /tmp/shoten/rootfs -xf busybox.tar
 //}
 
-@<code>{busybox.tar}を@<code>{/tmp/shoten/rootfs}へ展開する意味については後ほど説明します。それではコンテナを作り始めましょう。
+@<code>{busybox.tar}を@<code>{/tmp/shoten/rootfs}へ展開する意味については、のちほど説明します。それではコンテナを作り始めましょう。
 
 == カーネルリソースの隔離
 Linuxには、プロセスごとにリソースを分離して提供する@<tt>{Namespaces}という機能があります。
@@ -88,7 +88,7 @@ Linuxには、プロセスごとにリソースを分離して提供する@<tt>{
  * Network：ネットワークデバイスやIPアドレス
  * IPC：プロセス間通信のリソース
 
-たとえばPID名前空間を分離するとしましょう。そうすると、それぞれのPID名前空間で独立にプロセスIDがふられます。つまり、同一ホスト上で同一のPIDを持ったプロセスが同居しているような状態が作れるのです。このようにして名前空間を分離することで「コンテナAがコンテナBの重要なファイルシステムをアンマウントする」、「コンテナCがコンテナDのネットワークI/Fを削除する」といったこともできなくなります。
+たとえばPID名前空間を分離するとしましょう。そうすると、それぞれのPID名前空間で独立にプロセスIDがふられます。つまり、同一ホスト上で同一のPIDを持ったプロセスが同居しているような状態が作れるのです。こうして名前空間を分離することで「コンテナAがコンテナBの重要なファイルシステムをアンマウントする」、「コンテナCがコンテナDのネットワークI/Fを削除する」といったこともできなくなります。
 
 注意として、Namespacesはあくまでもプロセス間のカーネルリソースを隔離しているのであって、ホストのハードウェアリソース（CPUやメモリなど）へのアクセスを制限しているわけではありません。ハードウェアリソースの制限は、後に紹介する「cgroups」という機能によって実現されます。それでは実際に、各Namespaceを分離した新たな子プロセスを生成してみましょう。
 
@@ -183,8 +183,7 @@ cmd.SysProcAttr = &syscall.SysProcAttr{
 なぜこうするのかというと、単にユーザー名前空間を分離しただけでは起動後のプロセス内でユーザー/グループが@<code>{nobody/nogroup}となってしまうからです。新しいユーザー名前空間で実行されるプロセスのUID/GIDを設定するためには、@<code>{/proc/[pid]/uid_map}と@<code>{/proc/[pid]/gid_map}に対して書き込みを行います。Goでは@<code>{syscall.SysProcAttr}に@<code>{UidMappings}と@<code>{GidMappings}を設定することでこれをやってくれます。@<list>{namespace4}はrootユーザーとして新たなプロセスを実行しています。
 
 == ファイルシステムの隔離
-前節までは、マウント名前空間（@<code>{CLONE_NEWNS}フラグで指定したもの）含む各名前空間を分離したプロセスを起動するところまでやりました。
-前節のスクリプトを実行し、起動したプロセスに入った状態でプロセス内で何がマウントされているか見てましょう。
+前節までは、マウント名前空間（@<code>{CLONE_NEWNS}フラグで指定したもの）含む各名前空間を分離したプロセスを起動するところまでやりました。前節のスクリプトを実行し、起動したプロセスに入った状態でプロセス内で何がマウントされているか見てましょう。
 
 //list[mount1][実行結果][]{
 $ go build -o main
@@ -272,7 +271,7 @@ func pivotRoot(newroot string) error {
 しかし@<list>{namespace1}で見たように、一度@<code>{cmd.Run()}が呼ばれたら名前空間が分離され、そしてプロセスが実行されてしまいます。
 ここをうまく解決してくれるのが@<code>{reexec}パッケージです。
 
-=== reexecパッケージ
+==== reexecパッケージ
 @<code>{reexec}パッケージ@<fn>{reexec}は、OSS版Dockerの開発を進めるMobyプロジェクト@<fn>{moby}から提供されています。
 さっそく、@<code>{reexec}を使って@<list>{namespace1}をアップデートしたコードを見てましょう。
 
@@ -314,16 +313,10 @@ func main() {
 }
 //}
 
-@<list>{mount3}について説明していきます。
-まず@<code>{init()}での初期化処理が追加されているのがわかります。
-またその初期化処理の中で@<code>{reexec.Register("InitContainer", InitContainer)}が呼ばれています。
-ここでは、後述する@<code>{InitContainer}関数を@<b>{InitContainer}という名前でreexecに登録しました。
-こうして登録しておくことで、 @<code>{main()}内で@<tt>{InitContainer}というコマンドとして実行できます。
+@<list>{mount3}について説明していきます。まず@<code>{init()}での初期化処理が追加されているのがわかります。またその初期化処理の中で@<code>{reexec.Register("InitContainer", InitContainer)}が呼ばれています。ここでは、後述する@<code>{InitContainer}関数を@<b>{InitContainer}という名前でreexecに登録しました。こうして登録しておくことで、 @<code>{main()}内で@<tt>{InitContainer}というコマンドとして実行できます。
 
-続いて@<code>{InitContainer()}です。
-この関数内の@<code>{newrootPath}は、@<tt>{InitContainer}コマンドの引数として渡ってくる予定のものです。
-まずこの@<code>{newrootPath}を、@<list>{mount2}で実装した@<code>{pivotRoot()}に渡し、@<tt>{pivot_root}を行っています。
-そして@<code>{InitContainer()}の最後には、@<code>{Run()}で今までどおり@<code>{exec.Cmd}から@<code>{/bin/sh}を実行しています。
+続いて@<code>{InitContainer()}です。この関数内の@<code>{newrootPath}は、@<tt>{InitContainer}コマンドの引数として渡ってくる予定のものです。まずこの@<code>{newrootPath}を、@<list>{mount2}で実装した@<code>{pivotRoot()}に渡し、@<tt>{pivot_root}を行っています。そして@<code>{InitContainer()}の最後には、@<code>{Run()}で今までどおり@<code>{exec.Cmd}から@<code>{/bin/sh}を実行しています。
+
 では最後に@<code>{main()}を見ていきましょう。
 
 //list[mount4][reexecを使ったコード２：main.go][go]{
@@ -365,9 +358,7 @@ func main() {
 }
 //}
 
-新たに@<code>{cmd := reexec.Command("InitContainer", rootfsPath)}として、@<list>{mount3}で登録した@<code>{InitContainer}コマンドを呼んでいるのがわかります。
-それ以外は@<list>{namespace1}とほとんど変わらず、@<code>{cmd}に対して@<code>{Cloneflags}や@<code>{Uid/GidMappings}の設定をしています。
-では、@<list>{mount3}、@<list>{mount4}で見た新たな@<tt>{main.go}を実行してみましょう。
+新たに@<code>{cmd := reexec.Command("InitContainer", rootfsPath)}として、@<list>{mount3}で登録した@<code>{InitContainer}コマンドを呼んでいるのがわかります。それ以外は@<list>{namespace1}とほとんど変わらず、@<code>{cmd}に対して@<code>{Cloneflags}や@<code>{Uid/GidMappings}の設定をしています。では、@<list>{mount3}、@<list>{mount4}で見た新たな@<tt>{main.go}を実行してみましょう。
 
 //list[mount5][実行結果][]{
 $ go build -o main
