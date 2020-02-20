@@ -60,16 +60,24 @@ OSによってファイルシステムは異なります。コンテナでは、
 
  * ファイルシステムのルート変更/ファイルシステムの隔離
 
-== 実装
+=== 次節からの実装に向けて
  （ローレベル）コンテナランタイムを作るにあたり私たちが実装するべきものは、大きく次の３つです。
 
   * カーネルリソースの隔離（Namespace）
   * ファイルシステムの隔離（pivot_root）
   * ハードウェアリソースの制限（cgroups）
 
-次節からこれらを詳しく見ていきましょう。
+次節からこれらを詳しく見ていきます。その前に必要な準備をしましょう。ご自身のLinux環境で試してみてください。
 
-=== カーネルリソースの隔離
+//list[prepare][準備][]{
+$ git clone https://github.com/moricho/shoten8-container && cd shoten8-container
+$ mkdir -p /tmp/shoten/rootfs
+$ tar -C /tmp/shoten/rootfs -xf busybox.tar
+//}
+
+@<code>{busybox.tar}を@<code>{/tmp/shoten/rootfs}へ展開する意味については後ほど説明します。それではコンテナを作り始めましょう。
+
+== カーネルリソースの隔離
 Linuxには、プロセスごとにリソースを分離して提供する@<tt>{Namespaces}という機能があります。
 分離できるリソースには次のようなものがあります。
 
@@ -174,7 +182,7 @@ cmd.SysProcAttr = &syscall.SysProcAttr{
 @<list>{namespace4}では、ホストのユーザー名前空間と新たに分離したユーザー名前空間におけるUID/GIDのマッピングを行っています。
 なぜこうするのかというと、単にユーザー名前空間を分離しただけでは起動後のプロセス内でユーザー/グループが@<code>{nobody/nogroup}となってしまうからです。新しいユーザー名前空間で実行されるプロセスのUID/GIDを設定するためには、@<code>{/proc/[pid]/uid_map}と@<code>{/proc/[pid]/gid_map}に対して書き込みを行います。Goでは@<code>{syscall.SysProcAttr}に@<code>{UidMappings}と@<code>{GidMappings}を設定することでこれをやってくれます。@<list>{namespace4}はrootユーザーとして新たなプロセスを実行しています。
 
-=== ファイルシステムの隔離
+== ファイルシステムの隔離
 前節までは、マウント名前空間（@<code>{CLONE_NEWNS}フラグで指定したもの）含む各名前空間を分離したプロセスを起動するところまでやりました。
 前節のスクリプトを実行し、起動したプロセスに入った状態でプロセス内で何がマウントされているか見てましょう。
 
@@ -195,10 +203,10 @@ devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=5,\
 //footnote[mount_namespaces][@<href>{http://man7.org/linux/man-pages/man7/mount_namespaces.7.html}]
 //footnote[pivot_root][@<href>{https://linuxjm.osdn.jp/html/LDP_man-pages/man2/pivot_root.2.html}]
 
-==== ファイルシステムとは
+=== ファイルシステムとは
 ファイルシステムとは、@<b>{ブロックデバイスのデータを構造的に扱う仕組み}のことです。ブロックデバイスはHDDやSSDなどを指します。ブロックデバイスのデータは人が直接扱うには複雑ですが、ファイルシステムがそれらを@<b>{ファイル}や@<b>{ディレクトリ}という形で扱うことを可能にしています。またブロックデバイスのデータを、システム上のディレクトリツリーに対応させることを@<b>{マウント}といいます。
 
-==== pivot_root
+=== pivot_root
 ファイルシステムについて理解したところで、続いてpivot_rootについて説明していきます。@<code>{pivot_root}とは、プロセスのルートファイルシステムを変更するLinuxの機能です。@<code>{pivot_root}は引数として@<code>{new_root}と@<code>{put_old}を取ります。呼び出し元のプロセスのルートファイルシステムを@<code>{put_old}ディレクトリに移動させ、@<code>{new_root}を呼び出し元のプロセスの新しいルートファイルシステムにします。また@<code>{pivot_root}には、new_rootとput_oldに関して制約があります。
 
  * ディレクトリでなければならない
@@ -264,7 +272,7 @@ func pivotRoot(newroot string) error {
 しかし@<list>{namespace1}で見たように、一度@<code>{cmd.Run()}が呼ばれたら名前空間が分離され、そしてプロセスが実行されてしまいます。
 ここをうまく解決してくれるのが@<code>{reexec}パッケージです。
 
-==== reexecパッケージ
+=== reexecパッケージ
 @<code>{reexec}パッケージ@<fn>{reexec}は、OSS版Dockerの開発を進めるMobyプロジェクト@<fn>{moby}から提供されています。
 さっそく、@<code>{reexec}を使って@<list>{namespace1}をアップデートしたコードを見てましょう。
 
@@ -320,14 +328,7 @@ func main() {
 
 //list[mount4][reexecを使ったコード２：main.go][go]{
 func main() {
-	var rootfsPath string
-	flag.StringVar(
-		&rootfsPath,
-		"rootfs",
-		"/tmp/shoten/rootfs",
-		"Path to the root filesystem to use",
-	)
-	flag.Parse()
+	var rootfsPath = "/tmp/shoten/rootfs"
 
 	cmd := reexec.Command("InitContainer", rootfsPath)
 	cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -382,7 +383,7 @@ proc /proc proc rw,relatime 0 0
 //footnote[moby][@<href>{https://mobyproject.org/}]
 
 
-=== ハードウェアリソースの制限
+== ハードウェアリソースの制限
 前節までを通して、ユーザー・グループやファイルシステムなどのリソースが分離されたプロセスを作成できました。
 しかし、そのプロセスはまだCPUやメモリなどのハードウェアリソースに対して制限なくアクセスできる状態です。
 １つのコンテナがホストのCPUやメモリを食い尽くしてしまい、ほかのホストプロセスやコンテナに影響があると困りますよね。
@@ -473,7 +474,7 @@ func InitContainer() {
 
 前節までの@<code>{pivotRoot()}に加え、@<code>{cgroup()}を追加しました。このとき@<code>{cgroup()}と@<code>{pivotRoot()}の位置関係に注意してください。@<code>{cgroup()}ではホストの@<code>{/sys/fs/cgroup/cpu/shoten}配下にあるファイルへ書き込みを行いたいため、@<code>{pivotRoot()}でルートファイルシステムを変更する前に実行しています。
 
-ではCPU使用率が５％に制限されているか確認してみましょう。まず@<code>{/bin/sh}が実行されたプロセス内で@<code>{while :; do true ; done}を実行し、CPUに負荷をかけます。@<code>{cgroup}で制限してない場合、通常ならCPU使用率が１００％近くになります。
+ではCPU使用率が５％に制限されているか確認してみましょう。まず@<code>{/bin/sh}が実行されたプロセス内で@<code>{while :; do true ; done}を実行し、CPUに負荷をかけます。@<code>{cgroup}で制限していない場合、通常ならCPU使用率が100％近くになります。
 
 //list[cgroup5][負荷をかける][]{
 $ go build -o main
