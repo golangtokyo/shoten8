@@ -183,7 +183,7 @@ cmd.SysProcAttr = &syscall.SysProcAttr{
 なぜこうするのかというと、単にユーザー名前空間を分離しただけでは起動後のプロセス内でユーザー/グループが@<code>{nobody/nogroup}となってしまうからです。新しいユーザー名前空間で実行されるプロセスのUID/GIDを設定するためには、@<code>{/proc/[pid]/uid_map}と@<code>{/proc/[pid]/gid_map}に対して書き込みを行います。Goでは@<code>{syscall.SysProcAttr}に@<code>{UidMappings}と@<code>{GidMappings}を設定することでこれをやってくれます。@<list>{namespace4}はrootユーザーとして新たなプロセスを実行しています。
 
 == ファイルシステムの隔離
-前節までは、マウント名前空間（@<code>{CLONE_NEWNS}フラグで指定したもの）含む各名前空間を分離したプロセスを起動するところまでやりました。前節のスクリプトを実行し、起動したプロセスに入った状態でプロセス内で何がマウントされているか見てましょう。
+前節までは、マウント名前空間（@<code>{CLONE_NEWNS}フラグで指定したもの）含む各名前空間を分離したプロセスを起動するところまでやりました。前節のスクリプトを実行して起動したプロセスに入り、プロセス内で何がマウントされているか見てましょう。
 
 //list[mount1][実行結果][]{
 $ go build -o main
@@ -272,6 +272,7 @@ func pivotRoot(newroot string) error {
 ここをうまく解決してくれるのが@<code>{reexec}パッケージです。
 
 ==== reexecパッケージ
+
 @<code>{reexec}パッケージ@<fn>{reexec}は、OSS版Dockerの開発を進めるMobyプロジェクト@<fn>{moby}から提供されています。
 さっそく、@<code>{reexec}を使って@<list>{namespace1}をアップデートしたコードを見てましょう。
 
