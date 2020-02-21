@@ -42,9 +42,8 @@ DockerしかりLambdaしかり、コンテナ技術の中核を成すのが「�
 
 たとえばmacOSやWindowsの上でUbuntuイメージは直接動きません。
 
-鋭い方は、ではなぜ普段私たちのmacOSの上でCentOSやUbuntuのDockerイメージが動くのか疑問に思ったのではないでしょうか。
-実は私たちがMacで使っているDocker、正確にはDocker for Macは、「LinuxKit」という軽量のLinuxVMとして動作しています。つまり、macOS上にハイパーバイザ型のミニマムなLinuxを立ち上げ、そのうえでコンテナが動いているのです。（より正確には、macOSとLinuxKitの間に「HyperKit」というmacOSの仮想化システムが入ります。）
-どうりでDocker for Macの起動が遅いわけですよね。
+鋭い方は、ではなぜ普段私たちのmacOSの上でCentOSやUbuntuのDockerイメージが動くのか疑問に思ったのではないでしょうか。実は私たちがMacで使っているDocker、正確には@<tt>{Docker for Mac}は、@<tt>{LinuxKit}という軽量のLinuxVMとして動作しています。つまり、macOS上にハイパーバイザ型のミニマムなLinuxを立ち上げ、そのうえでコンテナが動いているのです。（より正確には、macOSとLinuxKitの間に@<tt>{HyperKit}というmacOSの仮想化システムが入ります。）
+どうりで@<tt>{Docker for Mac}の起動が遅いわけですよね。
 
 === 異なるOSイメージを動かすためのキー
 コンテナはOS機能すべてを再現するものではなく、あくまでも特定のディストリビューション上のアプリケーションの動きを再現するものです。そしてそのキーとなるものが「Linuxカーネル」と「ファイルシステム」です。
@@ -90,18 +89,18 @@ Linuxには、プロセスごとにリソースを分離して提供する@<tt>{
 
 たとえばPID名前空間を分離するとしましょう。そうすると、それぞれのPID名前空間で独立にプロセスIDがふられます。つまり、同一ホスト上で同一のPIDを持ったプロセスが同居しているような状態が作れるのです。こうして名前空間を分離することで「コンテナAがコンテナBの重要なファイルシステムをアンマウントする」、「コンテナCがコンテナDのネットワークI/Fを削除する」といったこともできなくなります。
 
-注意として、Namespacesはあくまでもプロセス間のカーネルリソースを隔離しているのであって、ホストのハードウェアリソース（CPUやメモリなど）へのアクセスを制限しているわけではありません。ハードウェアリソースの制限は、後に紹介する「cgroups」という機能によって実現されます。それでは実際に、各Namespaceを分離した新たな子プロセスを生成してみましょう。
+注意として、@<tt>{Namespaces}はあくまでもプロセス間のカーネルリソースを隔離しているのであって、ホストのハードウェアリソース（CPUやメモリなど）へのアクセスを制限しているわけではありません。ハードウェアリソースの制限は、後に紹介する@<tt>{cgroups}という機能によって実現されます。それでは実際に、各@<tt>{Namespace}を分離した新たな子プロセスを生成してみましょう。
 
 //list[namespace1][Namespaceの分離：main.go][go]{
 func main() {
   cmd := exec.Command("/bin/sh")
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags: unix.CLONE_NEWUSER |
-			unix.CLONE_NEWNET |
-			unix.CLONE_NEWPID |
-			unix.CLONE_NEWIPC |
-			unix.CLONE_NEWUTS |
-			unix.CLONE_NEWNS,
+		Cloneflags: syscall.CLONE_NEWUSER |
+			syscall.CLONE_NEWNET |
+			syscall.CLONE_NEWPID |
+			syscall.CLONE_NEWIPC |
+			syscall.CLONE_NEWUTS |
+			syscall.CLONE_NEWNS,
 		UidMappings: []syscall.SysProcIDMap{
 			{
 				ContainerID: 0,
@@ -144,13 +143,13 @@ uid=0(root) gid=0(root) groups=0(root)
 新しくプロセスが開始され、rootユーザーとして認識されているのがわかります。ではコードの方を見ていきましょう。
 
 //list[namespace3][プロセスのclone][go]{
-cmd.SysProcAttr = &unix.SysProcAttr{
-    Cloneflags: unix.CLONE_NEWUSER |
-        unix.CLONE_NEWNET |
-        unix.CLONE_NEWPID |
-        unix.CLONE_NEWIPC |
-        unix.CLONE_NEWUTS |
-        unix.CLONE_NEWNS,
+cmd.SysProcAttr = &syscall.SysProcAttr{
+    Cloneflags: syscall.CLONE_NEWUSER |
+        syscall.CLONE_NEWNET |
+        syscall.CLONE_NEWPID |
+        syscall.CLONE_NEWIPC |
+        syscall.CLONE_NEWUTS |
+        syscall.CLONE_NEWNS,
 }
 //}
 
@@ -180,7 +179,7 @@ cmd.SysProcAttr = &syscall.SysProcAttr{
 //}
 
 @<list>{namespace4}では、ホストのユーザー名前空間と新たに分離したユーザー名前空間におけるUID/GIDのマッピングを行っています。
-なぜこうするのかというと、単にユーザー名前空間を分離しただけでは起動後のプロセス内でユーザー/グループが@<code>{nobody/nogroup}となってしまうからです。新しいユーザー名前空間で実行されるプロセスのUID/GIDを設定するためには、@<code>{/proc/[pid]/uid_map}と@<code>{/proc/[pid]/gid_map}に対して書き込みを行います。Goでは@<code>{syscall.SysProcAttr}に@<code>{UidMappings}と@<code>{GidMappings}を設定することでこれをやってくれます。@<list>{namespace4}はrootユーザーとして新たなプロセスを実行しています。
+なぜこうするのかというと、単にユーザー名前空間を分離しただけでは起動後のプロセス内でユーザー/グループが@<code>{nobody/nogroup}となってしまうからです。新しいユーザー名前空間で実行されるプロセスのUID/GIDを設定するためには、@<code>{/proc/[pid]/uid_map}と@<code>{/proc/[pid]/gid_map}に対して書き込みを行います。Goでは@<code>{syscall.SysProcAttr}に@<code>{UidMappings}フィールドと@<code>{GidMappings}フィールドを設定することでこれをやってくれます。@<list>{namespace4}はrootユーザーとして新たなプロセスを実行しています。
 
 == ファイルシステムの隔離
 前節までは、マウント名前空間（@<code>{CLONE_NEWNS}フラグで指定したもの）含む各名前空間を分離したプロセスを起動するところまでやりました。前節のスクリプトを実行して起動したプロセスに入り、プロセス内で何がマウントされているか見てましょう。
@@ -197,7 +196,7 @@ devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=5,\
 ...
 //}
 
-マウント空間を分離したはずなのに、ホストでマウントされている多くのマウントの情報を見ることができてしまいます。@<code>{mount_namespaces}@<fn>{mount_namespaces}のmanページを見ると、それがなぜだかわかります。@<code>{CLONE_NEWNS}フラグ付きで@<code>{clone(2)}が呼ばれた場合、呼び出し元のマウントポイントのリストが新たなプロセスへコピーされる仕様になっているのです。これでは、コンテナからホストの情報が見えてしまっているためよくありません。そこで登場するのが@<b>{pivot_root}@<fn>{pivot_root}です。@<code>{pivot_root}について説明するにあたって、まずはファイルシステムについておさらいしましょう。
+マウント空間を分離したはずなのに、ホストでマウントされている多くのマウントの情報を見ることができてしまいます。@<code>{mount_namespaces}@<fn>{mount_namespaces}のmanページを見ると、それがなぜだかわかります。@<code>{CLONE_NEWNS}フラグ付きで@<code>{clone(2)}が呼ばれた場合、呼び出し元のマウントポイントのリストが新たなプロセスへコピーされる仕様になっているのです。これでは、コンテナからホストの情報が見えてしまっているためよくありません。そこで登場するのが@<b>{pivot_root(2)}@<fn>{pivot_root}です。@<code>{pivot_root}について説明するにあたって、まずはファイルシステムについておさらいしましょう。
 
 //footnote[mount_namespaces][@<href>{http://man7.org/linux/man-pages/man7/mount_namespaces.7.html}]
 //footnote[pivot_root][@<href>{https://linuxjm.osdn.jp/html/LDP_man-pages/man2/pivot_root.2.html}]
@@ -264,7 +263,7 @@ func pivotRoot(newroot string) error {
 
 @<code>{pivot_root}の制約の１つに「@<code>{new_root}と@<code>{put_old}は現在のrootと同じファイルシステムにあってはならない」がありました。まず@<code>{new_root}を新たなマウントポイントとして@<code>{new_root}自身でバインドマウントすることにより、これを満たすようにしています。またマウントは通常、ディレクトリツリーをブロックデバイスの領域へ紐付けるために行われます。それに対し「バインドマウント」は、ディレクトリをディレクトリにマウントします。今回は@<code>{new_root}を@<code>{new_root}でマウントすることにより、@<code>{new_root}以下の階層の内容はそのままに、@<code>{new_root}を新たなマウントポイントとしたファイルシステムとして認識させています。
 
-そしてこの後に@<code>{pivot_root}を行うことで、新たに@<code>{new_root}がファイルシステムのルートになり、その上位階層（ホストのディレクトリ）は見ることができなくなります。また@<code>{pivot_root}では元のファイルシステムが@<code>{put_old}をマウントポイントとしてマウントされるため、コンテナにホストの情報が残ったままになってしまいます。これを回避するために、続いて@<code>{put_old}をアンマウントしてから削除しています。
+そしてこの後に@<code>{pivot_root}を実行することで、新たに@<code>{new_root}がファイルシステムのルートになり、その上位階層（ホストのディレクトリ）は見ることができなくなります。また@<code>{pivot_root}では元のファイルシステムが@<code>{put_old}をマウントポイントとしてマウントされるため、コンテナにホストの情報が残ったままになってしまいます。これを回避するために、続いて@<code>{put_old}をアンマウントしてから削除しています。
 
 では@<list>{mount2}の@<code>{pivotRoot}関数はどのタイミングで実行すればよいでしょうか。
 もちろん名前空間が分離された後ですが、分離度の観点から、プロセスが起動し@<code>{/bin/sh}が実行されるよりも前がいいです。
@@ -473,7 +472,7 @@ func InitContainer() {
 
 前節までの@<code>{pivotRoot}関数に加え、@<code>{cgroup}関数を追加しました。このとき@<code>{cgroup}関数と@<code>{pivotRoot}関数の位置関係に注意してください。@<code>{cgroup}関数ではホストの@<code>{/sys/fs/cgroup/cpu/shoten}配下にあるファイルへ書き込みを行いたいため、@<code>{pivotRoot}関数でルートファイルシステムを変更する前に実行しています。
 
-ではCPU使用率が５％に制限されているか確認してみましょう。まず@<code>{/bin/sh}が実行されたプロセス内で「@<code>{while :; do true ; done}」を実行し、CPUに負荷をかけます。@<code>{cgroup}で制限していない場合、通常ならCPU使用率が100％近くになります。
+ではCPU使用率が５％に制限されているか確認してみましょう。まず@<code>{/bin/sh}が実行されたプロセス内で「@<code>{while :; do true ; done}」を実行し、CPUに負荷をかけます。@<code>{cgroups}の機能で制限していない場合、通常ならCPU使用率が100％近くになります。
 
 //list[cgroup5][負荷をかける][]{
 $ go build -o main
@@ -485,18 +484,40 @@ $ ./main
 では別のセッションに入り@<code>{top}コマンドでCPU使用率を確認してみます。
 
 //list[cgroup6][別セッションでCPU使用率を確認][]{
-PID USER      PR  NI    VIRT    RES    SHR S %CPU %MEM     TIME+ COMMAND
-20493 root      20   0    8100   2100   1988 R  5.0  0.2   0:02.31 sh
-20270 root      20   0  404360  18924  12840 S  0.3  1.9   0:02.06 ssm-session-wor
-1 root      20   0  225140   9212   7088 S  0.0  0.9   0:07.44 systemd
-2 root      20   0       0      0      0 S  0.0  0.0   0:00.00 kthreadd
+PID   USER     PR  NI    VIRT    RES    SHR S %CPU %MEM     TIME+ COMMAND
+20493 root     20   0    8100   2100   1988 R  5.0  0.2   0:02.31 sh
+20270 root     20   0  404360  18924  12840 S  0.3  1.9   0:02.06 ssm-session-wor
+1     root     20   0  225140   9212   7088 S  0.0  0.9   0:07.44 systemd
+2     root     20   0       0      0      0 S  0.0  0.0   0:00.00 kthreadd
 ...
 //}
 
 一番上の@<code>{sh}を実行しているプロセスが該当するものです。見事に５％前後でキープされているのがわかります。
 
-== 自作コンテナをさらに拡張する
-文。
+== 自作コンテナに機能を追加する
+ここまでを通してコンテナの核となる機能を実装できました。お疲れ様です。本節では、ここからさらに機能拡張をする場合に何をすればいいか簡単に紹介します。
+
+==== vethとLinux Bridge
+「7.3 カーネルリソースの隔離」の@<list>{namespace1}では、@<code>{syscall.SysProcAttr}構造体の@<code>{Cloneflags}フィールドに@<tt>{CLONE_NEWNET}フラグをセットすることでネットワーク名前空間を分離しました。
+
+ホストとコンテナの異なるネットワーク名前空間同士で通信ができるようにするためには、@<code>{veth}というL2の仮想ネットワークインタフェースを設定する必要があります。@<code>{veth}はペアで作成され、一方がホスト側、もう一方がコンテナ側のネットワーク名前空間に割り当てられて通信が可能になります。つまり、@<code>{veth}はホストとコンテナ間をL2でトンネリングしてくれるのです。
+またホスト側に仮想的なブリッジを作成してホスト側の@<code>{veth}と接続することで、コンテナはホスト外とも通信できるようになります。Linuxで仮想ブリッジを作る機能が@<code>{Linux Bridge}です。@<code>{veth}や@<code>{Bridge}は@<tt>{netlink}パッケージ@<fn>{netlink}を使うことで手軽に作成できます。
+
+//footnote[netlink][@<href>{https://github.com/vishvananda/netlink}]
+
+==== OverlayFS
+「7.4 ファイルシステムの隔離」では@<code>{pivot_root}を使うことで、コンテナに対して新たなファイルシステムを割り当て、コンテナからホストのファイルシステムを見えないようにしました。しかしコンテナのファイルシステムはあくまでもホストのルート下に存在しており、コンテナ内でファイルやディレクトリの作成・上書き・削除などを行うと、それがホストにも影響します。
+
+そこで役に立つのが@<code>{OverlayFS}という機能です。@<code>{OverlayFS}@<fn>{overlayfs}は@<code>{UnionFileSystem}の1つで、同じマウントポイントに複数のブロックデバイスをマウントし、それぞれに含まれるディレクトリ構造の和としてファイルシステムを扱います。つまりディレクトリツリーが重ね合わされており、上位層のディレクトリ/ファイルに変更を加ても、下位層のそれには影響が出ません。これを使うことで、コンテナで実行しているプロセス内でファイルシステムを操作してもホストへの影響を抑えられます。
+
+//footnote[overlayfs][@<href>{https://www.kernel.org/doc/html/latest/filesystems/overlayfs.html?highlight=overlayfs}]
+
+==== seccomp
+@<code>{seccomp(2)}@<fn>{seccomp}とは、プロセスのシステムコールの発行を制限する機能です。これを用いて、コンテナが危険なシステムコールを発行することを防ぐことができます。たとえばDockerでは、@<code>{moby/profiles/seccomp/default.json}@<fn>{seccompdocker}で発行可能/不可能なシステムコールを管理しています。
+
+//footnote[seccomp][@<href>{http://man7.org/linux/man-pages/man2/seccomp.2.html}]
+//footnote[seccompdocker][@<href>{https://github.com/moby/moby/blob/master/profiles/seccomp/default.json}]
+
 
 == おわりに
-文。
+コンテナ型仮想化の仕組みや、Goからカーネルの機能を使って簡単なコンテナを実装する方法を紹介しました。前節で紹介したようなさらなる機能拡張や、Docker以外のコンテナランタイムなど、興味がある方はコンテナ技術についてさらに調査してみてください。
