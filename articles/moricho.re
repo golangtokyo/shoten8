@@ -44,8 +44,6 @@ Dockerなどコンテナ技術の中核を成すのが「コンテナランタ�
 
 たとえば私たちが普段から馴染みのあるDockerについて考えてみましょう。鋭い方は、なぜ私たちのmacOSの上でCentOSやUbuntuのDockerイメージが動くのか疑問に思ったのではないでしょうか。実は私たちがMacで使っているDocker、正確には@<tt>{Docker for Mac}は、@<tt>{LinuxKit}@<fn>{linuxkit}という軽量のLinuxVMとして動作しています。つまり、macOS上にハイパーバイザ型のミニマムなLinuxを立ち上げ、そのうえでコンテナが動いているのです。（より正確には、macOSとLinuxKitの間に@<tt>{HyperKit}@<fn>{hyperkit}というmacOSの仮想化システムが入ります。）
 
-このように、
-
 //footnote[linuxkit][@<href>{https://github.com/linuxkit/linuxkit}]
 //footnote[hyperkit][@<href>{https://github.com/moby/hyperkit}]
 
@@ -505,14 +503,14 @@ PID   USER     PR  NI    VIRT    RES    SHR S %CPU %MEM     TIME+ COMMAND
 「7.3 カーネルリソースの隔離」の@<list>{namespace1}では、@<code>{syscall.SysProcAttr}構造体の@<code>{Cloneflags}フィールドに@<tt>{CLONE_NEWNET}フラグをセットし、ネットワーク名前空間を分離しました。
 
 ホストとコンテナの異なるネットワーク名前空間同士で通信ができるようにするためには、@<code>{veth}@<fn>{veth}というL2の仮想ネットワークインタフェースを設定する必要があります。@<code>{veth}はペアで作成され、一方がホスト側、もう一方がコンテナ側のネットワーク名前空間に割り当てられて通信が可能になります。つまり、@<code>{veth}はホストとコンテナ間をL2でトンネリングしてくれるのです。
-またホスト側に仮想的なブリッジを作成してホスト側の@<code>{veth}と接続することで、コンテナはホスト外とも通信が可能になります。Linuxで仮想ブリッジを作る機能が@<code>{bridge}@<fn>{bridge}です。@<code>{veth}や@<code>{bridge}は@<tt>{netlink}パッケージ@<fn>{netlink}を使うことで手軽に実装できます。
+またホスト側に仮想的なブリッジを作成してホスト側の@<code>{veth}と接続することで、コンテナはホスト外とも通信が可能になります。Linuxで仮想ブリッジを作る機能が@<code>{bridge}@<fn>{vbridge}です。@<code>{veth}や@<code>{bridge}は@<tt>{netlink}パッケージ@<fn>{netlink}を使うことで手軽に実装できます。
 
 //footnote[netlink][@<href>{https://github.com/vishvananda/netlink}]
 //footnote[veth][@<href>{http://man7.org/linux/man-pages/man4/veth.4.html}]
-//footnote[bridge][@<href>{http://man7.org/linux/man-pages/man8/bridge.8.html}]
+//footnote[vbridge][@<href>{http://man7.org/linux/man-pages/man8/bridge.8.html}]
 
 ==== OverlayFS
-「7.4 ファイルシステムの隔離」では@<code>{pivot_root（2）}や@<code>{mount（2）}を使うことで、コンテナに対して新たなファイルシステムを割り当て、コンテナからホストのファイルシステムを見えないようにしました。しかしコンテナのファイルシステムはあくまでもホストのルート下に存在しており、コンテナ内でファイルやディレクトリの作成・上書き・削除などを行うと、それがホストにも影響します。
+「7.4 ファイルシステムの隔離」では@<code>{pivot_root}や@<code>{mount}を使い、コンテナに対して新たなファイルシステムを割り当て、コンテナからホストのファイルシステムを見えないようにしました。しかしコンテナのファイルシステムはあくまでもホストのルート下に存在しており、コンテナ内でファイルやディレクトリの作成・上書き・削除などを行うと、それがホストにも影響します。
 
 そこで役に立つのが@<code>{OverlayFS}という機能です。@<code>{OverlayFS}@<fn>{overlayfs}は@<code>{UnionFileSystem}の1つで、同じマウントポイントに複数のブロックデバイスをマウントし、それぞれに含まれるディレクトリ構造の和としてファイルシステムを扱います。ディレクトリツリーが重ね合わされており、上位層のディレクトリ/ファイルに変更を加ても、下位層のそれには影響が出ません。これを使うことで、コンテナで実行しているプロセス内でファイルシステムを操作してもホストへの影響を抑えられます。
 
