@@ -518,6 +518,8 @@ PID   USER     PR  NI    VIRT    RES    SHR S %CPU %MEM     TIME+ COMMAND
 
 そこで役に立つのが@<code>{OverlayFS}という機能です。@<code>{OverlayFS}@<fn>{overlayfs}は@<code>{UnionFileSystem}の1つで、同じマウントポイントに複数のブロックデバイスをマウントし、それぞれに含まれるディレクトリ構造の和としてファイルシステムを扱います。ディレクトリツリーが重ね合わされており、上位層のディレクトリ/ファイルに変更を加ても、下位層のそれには影響が出ません。これを使うことで、コンテナで実行しているプロセス内でファイルシステムを操作してもホストへの影響を抑えられます。
 
+//image[morito/overlay-construct][OverlayFSの構成][scale=0.9]
+
 //footnote[overlayfs][@<href>{https://www.kernel.org/doc/html/latest/filesystems/overlayfs.html?highlight=overlayfs}]
 
 ==== seccomp
