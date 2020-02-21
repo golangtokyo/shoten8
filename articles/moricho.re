@@ -197,7 +197,7 @@ devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=5,\
 ...
 //}
 
-マウント空間を分離したはずなのに、ホストでマウントされている多くのマウントの情報を見ることができてしまいます。@<code>{mount_namespaces}@<fn>{mount_namespaces}のmanページを見ると、それがなぜだかわかります。@<code>{CLONE_NEWNS}フラグ付きで@<code>{clone()}が呼ばれた場合、呼び出し元のマウントポイントのリストが新たなプロセスへコピーされる仕様になっているのです。これでは、コンテナからホストの情報が見えてしまっているためよくありません。そこで登場するのが@<b>{pivot_root}@<fn>{pivot_root}です。@<code>{pivot_root}について説明するにあたって、まずはファイルシステムについておさらいしましょう。
+マウント空間を分離したはずなのに、ホストでマウントされている多くのマウントの情報を見ることができてしまいます。@<code>{mount_namespaces}@<fn>{mount_namespaces}のmanページを見ると、それがなぜだかわかります。@<code>{CLONE_NEWNS}フラグ付きで@<code>{clone(2)}が呼ばれた場合、呼び出し元のマウントポイントのリストが新たなプロセスへコピーされる仕様になっているのです。これでは、コンテナからホストの情報が見えてしまっているためよくありません。そこで登場するのが@<b>{pivot_root}@<fn>{pivot_root}です。@<code>{pivot_root}について説明するにあたって、まずはファイルシステムについておさらいしましょう。
 
 //footnote[mount_namespaces][@<href>{http://man7.org/linux/man-pages/man7/mount_namespaces.7.html}]
 //footnote[pivot_root][@<href>{https://linuxjm.osdn.jp/html/LDP_man-pages/man2/pivot_root.2.html}]
@@ -206,11 +206,11 @@ devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=5,\
 ファイルシステムとは、@<b>{ブロックデバイスのデータを構造的に扱う仕組み}のことです。ブロックデバイスはHDDやSSDなどを指します。ブロックデバイスのデータは人が直接扱うには複雑ですが、ファイルシステムがそれらを@<b>{ファイル}や@<b>{ディレクトリ}という形で扱うことを可能にしています。またブロックデバイスのデータを、システム上のディレクトリツリーに対応させることを@<b>{マウント}といいます。
 
 === pivot_root
-ファイルシステムについて理解したところで、続いてpivot_rootについて説明していきます。@<code>{pivot_root}とは、プロセスのルートファイルシステムを変更するLinuxの機能です。@<code>{pivot_root}は引数として@<code>{new_root}と@<code>{put_old}を取ります。呼び出し元のプロセスのルートファイルシステムを@<code>{put_old}ディレクトリに移動させ、@<code>{new_root}を呼び出し元のプロセスの新しいルートファイルシステムにします。また@<code>{pivot_root}には、new_rootとput_oldに関して制約があります。
+ファイルシステムについて理解したところで、続いて@<code>{pivot_root}について説明していきます。@<code>{pivot_root}とは、プロセスのルートファイルシステムを変更するLinuxの機能です。@<code>{pivot_root}は引数として@<code>{new_root}と@<code>{put_old}を取ります。呼び出し元のプロセスのルートファイルシステムを@<code>{put_old}ディレクトリに移動させ、@<code>{new_root}を呼び出し元のプロセスの新しいルートファイルシステムにします。また@<code>{pivot_root}には、new_rootとput_oldに関して制約があります。
 
  * ディレクトリでなければならない
  * 現在のrootと同じファイルシステムにあってはならない
- * put_oldはnew_rootの下になければならない
+ * @<code>{put_old}は@<code>{new_root}の下になければならない
  * ほかのファイルシステムがput_oldにマウントされていてはならない
 
 の４つです。
@@ -258,17 +258,17 @@ func pivotRoot(newroot string) error {
 
 流れは次のようになっています。
 
- 1. new_rootでnew_root自身をバインドマウント
- 2. pivot_rootを実行
+ 1. @<code>{new_root}で@<code>{new_root}自身をバインドマウント
+ 2. @<code>{pivot_root}を実行
  3. 不要になった以前のルートファイルシステムをアンマウント、そしてディレクトリを削除
 
-@<code>{pivot_root}の制約の１つに「new_rootとput_oldは現在のrootと同じファイルシステムにあってはならない」がありました。まず@<code>{new_root}を新たなマウントポイントとして@<code>{new_root}自身でバインドマウントすることにより、これを満たすようにしています。またマウントは通常、ディレクトリツリーをブロックデバイスの領域へ紐付けるために行われます。それに対し「バインドマウント」は、ディレクトリをディレクトリにマウントします。今回は@<code>{new_root}を@<code>{new_root}でマウントすることにより、@<code>{new_root}以下の階層の内容はそのままに、@<code>{new_root}を新たなマウントポイントとしたファイルシステムとして認識させています。
+@<code>{pivot_root}の制約の１つに「@<code>{new_root}と@<code>{put_old}は現在のrootと同じファイルシステムにあってはならない」がありました。まず@<code>{new_root}を新たなマウントポイントとして@<code>{new_root}自身でバインドマウントすることにより、これを満たすようにしています。またマウントは通常、ディレクトリツリーをブロックデバイスの領域へ紐付けるために行われます。それに対し「バインドマウント」は、ディレクトリをディレクトリにマウントします。今回は@<code>{new_root}を@<code>{new_root}でマウントすることにより、@<code>{new_root}以下の階層の内容はそのままに、@<code>{new_root}を新たなマウントポイントとしたファイルシステムとして認識させています。
 
 そしてこの後に@<code>{pivot_root}を行うことで、新たに@<code>{new_root}がファイルシステムのルートになり、その上位階層（ホストのディレクトリ）は見ることができなくなります。また@<code>{pivot_root}では元のファイルシステムが@<code>{put_old}をマウントポイントとしてマウントされるため、コンテナにホストの情報が残ったままになってしまいます。これを回避するために、続いて@<code>{put_old}をアンマウントしてから削除しています。
 
-では@<list>{mount2}の@<code>{pivot_root}関数はどのタイミングで実行すればよいでしょうか。
+では@<list>{mount2}の@<code>{pivotRoot}関数はどのタイミングで実行すればよいでしょうか。
 もちろん名前空間が分離された後ですが、分離度の観点から、プロセスが起動し@<code>{/bin/sh}が実行されるよりも前がいいです。
-しかし@<list>{namespace1}で見たように、一度@<code>{cmd.Run()}が呼ばれたら名前空間が分離され、そしてプロセスが実行されてしまいます。ここをうまく解決してくれるのが@<code>{reexec}パッケージです。
+しかし@<list>{namespace1}で見たように、一度@<code>{cmd.Run}関数が呼ばれたら名前空間が分離され、そしてプロセスが実行されてしまいます。ここをうまく解決してくれるのが@<code>{reexec}パッケージです。
 
 === reexecパッケージ
 
@@ -313,11 +313,11 @@ func main() {
 }
 //}
 
-@<list>{mount3}について説明していきます。まず@<code>{init()}での初期化処理が追加されているのがわかります。またその初期化処理の中で@<code>{reexec.Register("InitContainer", InitContainer)}が呼ばれています。ここでは、後述する@<code>{InitContainer}関数を@<b>{InitContainer}という名前でreexecに登録しました。こうして登録しておくことで、 @<code>{main()}内で@<tt>{InitContainer}というコマンドとして実行できます。
+@<list>{mount3}について説明していきます。まず@<code>{init}関数での初期化処理が追加されているのがわかります。またその初期化処理の中で@<code>{reexec.Register("InitContainer", InitContainer)}が呼ばれています。ここでは、後述する@<code>{InitContainer}関数を@<b>{InitContainer}という名前でreexecに登録しました。こうして登録しておくことで、 @<code>{main}関数内で@<tt>{InitContainer}というコマンドとして実行できます。
 
-続いて@<code>{InitContainer()}です。この関数内の@<code>{newrootPath}は、@<tt>{InitContainer}コマンドの引数として渡ってくる予定のものです。まずこの@<code>{newrootPath}を、@<list>{mount2}で実装した@<code>{pivotRoot()}に渡し、@<tt>{pivot_root}を行っています。そして@<code>{InitContainer()}の最後には、@<code>{Run()}で今までどおり@<code>{exec.Cmd}から@<code>{/bin/sh}を実行しています。
+続いて@<code>{InitContainer}関数です。この関数内の@<code>{newrootPath}は、@<tt>{InitContainer}コマンドの引数として渡ってくる予定のものです。まずこの@<code>{newrootPath}を、@<list>{mount2}で実装した@<code>{pivotRoot}関数に渡し、@<tt>{pivot_root}を行っています。そして@<code>{InitContainer}関数の最後には、@<code>{Run}関数で今までどおり@<code>{exec.Cmd}から@<code>{/bin/sh}を実行しています。
 
-では最後に@<code>{main()}を見ていきましょう。
+では最後に@<code>{main}関数を見ていきましょう。
 
 //list[mount4][reexecを使ったコード２：main.go][go]{
 func main() {
@@ -395,7 +395,7 @@ proc /proc proc rw,relatime 0 0
 
 //footnote[cgroups][@<href>{http://man7.org/linux/man-pages/man7/cgroups.7.html}]
 
-@<tt>{cgroups}では@<tt>{/sys/fs/cgroup}配下に仮装的なファイルシステムを提供しています。
+@<tt>{cgroups}では@<tt>{/sys/fs/cgroup}配下に仮想的なファイルシステムを提供しています。
 このファイルシステムに対して読み込み・書き込みの操作を行うことで、グループに対してリソースの利用に制限をかけることが可能になっています。試しに@<tt>{Ubuntu16.04}上で@<code>{ls /sys/fs/cgroup}を実行してみます。
 
 //list[cgroup1][ls /sys/fs/cgroup の実行結果][]{
@@ -451,7 +451,7 @@ cpuacct.usage_user  tasks
  * @<code>{tasks}ファイルに自身のPIDを書き込み
  * @<code>{cpu.cfs_quota_us}にCPU使用率が５％になるように5000という数字の書き込み
 
-ではまた@<code>{reexec}パッケージを使って、@<list>{cgroup3}を適用していきましょう。変更箇所は@<code>{InitContainer()}関数だけです。
+ではまた@<code>{reexec}パッケージを使って、@<list>{cgroup3}を適用していきましょう。変更箇所は@<code>{InitContainer}関数だけです。
 
 //list[cgroup4][InitContainer()の更新][go]{
 func InitContainer() {
@@ -471,7 +471,7 @@ func InitContainer() {
 }
 //}
 
-前節までの@<code>{pivotRoot()}に加え、@<code>{cgroup()}を追加しました。このとき@<code>{cgroup()}と@<code>{pivotRoot()}の位置関係に注意してください。@<code>{cgroup()}ではホストの@<code>{/sys/fs/cgroup/cpu/shoten}配下にあるファイルへ書き込みを行いたいため、@<code>{pivotRoot()}でルートファイルシステムを変更する前に実行しています。
+前節までの@<code>{pivotRoot}関数に加え、@<code>{cgroup}関数を追加しました。このとき@<code>{cgroup}関数と@<code>{pivotRoot}関数の位置関係に注意してください。@<code>{cgroup}関数ではホストの@<code>{/sys/fs/cgroup/cpu/shoten}配下にあるファイルへ書き込みを行いたいため、@<code>{pivotRoot}関数でルートファイルシステムを変更する前に実行しています。
 
 ではCPU使用率が５％に制限されているか確認してみましょう。まず@<code>{/bin/sh}が実行されたプロセス内で「@<code>{while :; do true ; done}」を実行し、CPUに負荷をかけます。@<code>{cgroup}で制限していない場合、通常ならCPU使用率が100％近くになります。
 
