@@ -42,10 +42,11 @@ Dockerなどコンテナ技術の中核を成すのが「コンテナランタ�
 
 そのためmacOSやWindowsの上でUbuntuイメージは直接動きません。
 
-たとえば私たちが普段から馴染みのあるDockerについて考えてみましょう。鋭い方は、なぜ私たちのmacOSの上でCentOSやUbuntuのDockerイメージが動くのか疑問に思ったのではないでしょうか。実は私たちがMacで使っているDocker、正確には@<tt>{Docker for Mac}は、@<tt>{LinuxKit}@<fn>{linuxkit}という軽量のLinuxVMとして動作しています。つまり、macOS上にハイパーバイザ型のミニマムなLinuxを立ち上げ、そのうえでコンテナが動いているのです。（より正確には、macOSとLinuxKitの間に@<tt>{HyperKit}@<fn>{hyperkit}というmacOSの仮想化システムが入ります。）
+たとえば私たちが普段から馴染みのあるDockerについて考えてみましょう。鋭い方は、なぜ私たちのmacOSの上でCentOSやUbuntuのDockerイメージが動くのか疑問に思ったのではないでしょうか。実は私たちがMacで使っているDocker、正確には@<tt>{Docker for Mac}は、@<tt>{LinuxKit}@<fn>{linuxkit}という軽量のLinuxVMとして動作しています。つまり、macOS上にハイパーバイザ型のミニマムなLinuxを立ち上げ、そのうえでコンテナが動いているのです。より正確には、macOSとLinuxKitの間に@<tt>{HyperKit}@<fn>{hyperkit}というmacOSの仮想化システムが入ります。（参考：@<tt>{LinuxKit with HyperKit（macOS）}@<fn>{disc}）
 
 //footnote[linuxkit][@<href>{https://github.com/linuxkit/linuxkit}]
 //footnote[hyperkit][@<href>{https://github.com/moby/hyperkit}]
+//footnote[disc][@<href>{https://github.com/linuxkit/linuxkit/blob/master/docs/platform-hyperkit.md}]
 
 === 異なるOSイメージを動かすためのキー
 コンテナはOS機能すべてを再現するものではなく、あくまでも特定のディストリビューション上のアプリケーションの動きを再現するものです。そしてそのキーとなるものが「Linuxカーネル」と「ファイルシステム」です。
