@@ -153,7 +153,7 @@ cmd.SysProcAttr = &syscall.SysProcAttr{
 }
 //}
 
-まずプロセスの起動に際して@<code>{Cloneflags}というものを渡しています。これはLinuxカーネルのシステムコールである@<code>{clone(2)}@<fn>{clone}コマンドに渡せるflagと同じです。@<code>{clone(2)}とは、Linuxが子プロセスの作成をするときに呼ばれるシステムコールです。ここでは上であげた６つの名前空間すべてを新しく分離しています。
+まずプロセスの起動に際して@<code>{Cloneflags}というものを渡しています。これはLinuxカーネルのシステムコールである@<code>{clone（2）}@<fn>{clone}コマンドに渡せるflagと同じです。@<code>{clone（2）}とは、Linuxが子プロセスの作成をするときに呼ばれるシステムコールです。ここでは上であげた６つの名前空間すべてを新しく分離しています。
 
 //footnote[clone][@<href>{https://linuxjm.osdn.jp/html/LDP_man-pages/man2/clone.2.html}]
 
@@ -196,7 +196,7 @@ devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=5,\
 ...
 //}
 
-マウント空間を分離したはずなのに、ホストでマウントされている多くのマウントの情報を見ることができてしまいます。@<code>{mount_namespaces}@<fn>{mount_namespaces}のmanページを見ると、それがなぜだかわかります。@<code>{CLONE_NEWNS}フラグ付きで@<code>{clone(2)}が呼ばれた場合、呼び出し元のマウントポイントのリストが新たなプロセスへコピーされる仕様になっているのです。これでは、コンテナからホストの情報が見えてしまっているためよくありません。そこで登場するのが@<b>{pivot_root(2)}@<fn>{pivot_root}です。@<code>{pivot_root}について説明するにあたって、まずはファイルシステムについておさらいしましょう。
+マウント空間を分離したはずなのに、ホストでマウントされている多くのマウントの情報を見ることができてしまいます。@<code>{mount_namespaces}@<fn>{mount_namespaces}のmanページを見ると、それがなぜだかわかります。@<code>{CLONE_NEWNS}フラグ付きで@<code>{clone（2）}が呼ばれた場合、呼び出し元のマウントポイントのリストが新たなプロセスへコピーされる仕様になっているのです。これでは、コンテナからホストの情報が見えてしまっているためよくありません。そこで登場するのが@<b>{pivot_root（2）}@<fn>{pivot_root}です。@<code>{pivot_root}について説明するにあたって、まずはファイルシステムについておさらいしましょう。
 
 //footnote[mount_namespaces][@<href>{http://man7.org/linux/man-pages/man7/mount_namespaces.7.html}]
 //footnote[pivot_root][@<href>{https://linuxjm.osdn.jp/html/LDP_man-pages/man2/pivot_root.2.html}]
@@ -513,7 +513,7 @@ PID   USER     PR  NI    VIRT    RES    SHR S %CPU %MEM     TIME+ COMMAND
 //footnote[overlayfs][@<href>{https://www.kernel.org/doc/html/latest/filesystems/overlayfs.html?highlight=overlayfs}]
 
 ==== seccomp
-@<code>{seccomp(2)}@<fn>{seccomp}とは、プロセスのシステムコールの発行を制限する機能です。これを用いて、コンテナが危険なシステムコールを発行することを防ぐことができます。たとえばDockerでは、@<code>{moby/profiles/seccomp/default.json}@<fn>{seccompdocker}で発行可能/不可能なシステムコールを管理しています。
+@<code>{seccomp（2）}@<fn>{seccomp}とは、プロセスのシステムコールの発行を制限する機能です。これを用いて、コンテナが危険なシステムコールを発行することを防ぐことができます。たとえばDockerでは、@<code>{moby/profiles/seccomp/default.json}@<fn>{seccompdocker}で発行可能/不可能なシステムコールを管理しています。
 
 //footnote[seccomp][@<href>{http://man7.org/linux/man-pages/man2/seccomp.2.html}]
 //footnote[seccompdocker][@<href>{https://github.com/moby/moby/blob/master/profiles/seccomp/default.json}]
