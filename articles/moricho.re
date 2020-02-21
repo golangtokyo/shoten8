@@ -489,7 +489,7 @@ $ ./main
 //list[cgroup6][別セッションでCPU使用率を確認][]{
 PID   USER     PR  NI    VIRT    RES    SHR S %CPU %MEM     TIME+ COMMAND
 20493 root     20   0    8100   2100   1988 R  5.0  0.2   0:02.31 sh
-20270 root     20   0  404360  18924  12840 S  0.3  1.9   0:02.06 ssm-session-wor
+20270 root     20   0  404360  18924  12840 S  0.3  1.9   0:02.06 ssm-session
 1     root     20   0  225140   9212   7088 S  0.0  0.9   0:07.44 systemd
 2     root     20   0       0      0      0 S  0.0  0.0   0:00.00 kthreadd
 ...
