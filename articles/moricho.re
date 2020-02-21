@@ -92,7 +92,9 @@ Linuxには、プロセスごとにリソースを分離して提供する@<tt>{
 
 たとえばPID名前空間を分離するとしましょう。そうすると、それぞれのPID名前空間で独立にプロセスIDがふられます。つまり、同一ホスト上で同一のPIDを持ったプロセスが同居しているような状態が作れるのです。こうして名前空間を分離することで「コンテナAがコンテナBの重要なファイルシステムをアンマウントする」、「コンテナCがコンテナDのネットワークI/Fを削除する」といったこともできなくなります。
 
-注意として、@<tt>{Namespaces}はあくまでもプロセス間のカーネルリソースを隔離しているのであって、ホストのハードウェアリソース（CPUやメモリなど）へのアクセスを制限しているわけではありません。ハードウェアリソースの制限は、後に紹介する@<tt>{cgroups}という機能によって実現されます。それでは実際に、各@<tt>{Namespace}を分離した新たな子プロセスを生成してみましょう。
+注意として、@<tt>{Namespaces}はあくまでもプロセス間のカーネルリソースを隔離しているのであって、ホストのハードウェアリソース（CPUやメモリなど）へのアクセスを制限しているわけではありません。ハードウェアリソースの制限は、後に紹介する@<tt>{cgroups}という機能によって実現されます。
+
+それでは実際に、プロセスに対して@<tt>{Namespace}を分離するコードを見ていきましょう。
 
 //list[namespace1][Namespaceの分離：main.go][go]{
 func main() {
@@ -132,7 +134,7 @@ func main() {
 }
 //}
 
-まずは@<list>{namespace1}を実行してみてください。
+@<list>{namespace1}では子プロセスを生成して名前空間を分離し、そのプロセス内で@<code>{/bin/sh}コマンドを実行しています。@<list>{namespace1}の実行結果を見てみましょう。
 
 //list[namespace2][実行結果][]{
 $ go build -o main
@@ -156,9 +158,10 @@ cmd.SysProcAttr = &syscall.SysProcAttr{
 }
 //}
 
-まずプロセスの起動に際して@<code>{Cloneflags}というものを渡しています。これはLinuxカーネルのシステムコールである@<code>{clone（2）}@<fn>{clone}コマンドに渡せるflagと同じです。@<code>{clone（2）}とは、Linuxが子プロセスの作成をするときに呼ばれるシステムコールです。ここでは上であげた６つの名前空間すべてを新しく分離しています。
+まずプロセスの起動に際して@<code>{Cloneflags}というものを渡しています。これはLinuxカーネルのシステムコールである@<code>{clone（2）}@<fn>{clone}コマンドに渡せるflagと同じです。@<code>{clone（2）}とは、Linuxが子プロセスの作成をするときに呼ばれるシステムコールです。ここでは上であげた６つの名前空間すべてを新しく分離しています。@<code>{syscall.SysProcAttr}構造体の詳細については@<tt>{golang.org}@<fn>{sysprocattr}を参照してください。
 
 //footnote[clone][@<href>{https://linuxjm.osdn.jp/html/LDP_man-pages/man2/clone.2.html}]
+//footnote[sysprocattr][@<href>{https://golang.org/pkg/syscall/#SysProcAttr}]
 
 次にその下を見ましょう。
 
