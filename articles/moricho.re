@@ -495,13 +495,13 @@ PID   USER     PR  NI    VIRT    RES    SHR S %CPU %MEM     TIME+ COMMAND
 一番上の@<code>{sh}を実行しているプロセスが該当するものです。見事に５％前後でキープされているのがわかります。
 
 == 自作コンテナに機能を追加する
-ここまでを通してコンテナの核となる機能を実装できました。お疲れ様です。本節では、ここからさらに機能拡張をする場合に何をすればいいか簡単に紹介します。
+ここまでを通してコンテナの核となる機能を実装できました。お疲れさまです。本節では、ここからさらに機能拡張をする場合に何をすればいいか簡単に紹介します。
 
 ==== vethとLinux Bridge
-「7.3 カーネルリソースの隔離」の@<list>{namespace1}では、@<code>{syscall.SysProcAttr}構造体の@<code>{Cloneflags}フィールドに@<tt>{CLONE_NEWNET}フラグをセットすることでネットワーク名前空間を分離しました。
+「7.3 カーネルリソースの隔離」の@<list>{namespace1}では、@<code>{syscall.SysProcAttr}構造体の@<code>{Cloneflags}フィールドに@<tt>{CLONE_NEWNET}フラグをセットしネットワーク名前空間を分離しました。
 
 ホストとコンテナの異なるネットワーク名前空間同士で通信ができるようにするためには、@<code>{veth}というL2の仮想ネットワークインタフェースを設定する必要があります。@<code>{veth}はペアで作成され、一方がホスト側、もう一方がコンテナ側のネットワーク名前空間に割り当てられて通信が可能になります。つまり、@<code>{veth}はホストとコンテナ間をL2でトンネリングしてくれるのです。
-またホスト側に仮想的なブリッジを作成してホスト側の@<code>{veth}と接続することで、コンテナはホスト外とも通信できるようになります。Linuxで仮想ブリッジを作る機能が@<code>{Linux Bridge}です。@<code>{veth}や@<code>{Bridge}は@<tt>{netlink}パッケージ@<fn>{netlink}を使うことで手軽に作成できます。
+またホスト側に仮想的なブリッジを作成してホスト側の@<code>{veth}と接続することで、コンテナはホスト外とも通信が可能になります。Linuxで仮想ブリッジを作る機能が@<code>{Linux Bridge}です。@<code>{veth}や@<code>{Bridge}は@<tt>{netlink}パッケージ@<fn>{netlink}を使うことで手軽に作成できます。
 
 //footnote[netlink][@<href>{https://github.com/vishvananda/netlink}]
 
