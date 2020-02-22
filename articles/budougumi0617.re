@@ -184,14 +184,14 @@ Adaptorパターン、Decoratorパターン、Compositeパターン
 #@# textlint-enable
 #@# textlint-disable
 「拡張に対して開いている」。これは、モジュールの振る舞いを拡張できることを意味する。
-アプリケーションの要求が変化したら、それらの変更内容を満たす新しいふるまいでモジュールを拡張することが可能である。言い換えれば、モジュールが実行することを変更できるのである。
+アプリケーションの要求が変化したら、それらの変更内容を満たす新しいふるまいでモジュールを拡張できる。言い換えれば、モジュールが実行することを変更できるのである。
 「変更に対して閉じている」。モジュールの振る舞いを拡張した結果として、モジュールのソースやバイナリコードで変更が発生しない。モジュールのバイナリコードは、リンク可能なライブラリなのか、DLIなのか、Javaの@<tt>{.jar}なのかにかかわらず、変更されないままとなる。
 #@# textlint-enable
 #@# textlint-disable
 
 
 #@# textlint-disable
-== ここから書けていない。
+#@# ここから下は書けていない。
 
 
 == @<kw>{リスコフの置換原則}（@<kw>{LSP}, @<tti>{Liskov substitution principle}）
@@ -221,7 +221,7 @@ DaveはどうやってGoに紐付けたか。
 ファサード。
 
 
-== ここまで書けていない
+#@# ここから上まで書けていない
 #@# textlint-enable
 
 == @<kw>{依存関係逆転の原則}（@<kw>{DIP}, @<tti>{Dependency inversion principle}）
@@ -343,6 +343,9 @@ func main() {
 
 
 === 埋込み型を利用した@<tt>{DIP}
+Goは構造体の中に別の構造体やインターフェースを埋め込めます。
+インターフェースを埋め込むことで、抽象に依存した型を定義できます。
+インターフェースのメソッドが呼び出されるまでに何らかの方法で実装への依存を注入することで、実装の詳細が呼ばれるようになります。
 
 //list[label][title]{
 type OrderService interface {
@@ -362,6 +365,7 @@ func (app *Application) Run(id int) error {
 }
 
 func main() {
+  // 初期化時の宣言はオブジェクト初期化時にDIする方法と変わらない。
   app := &Application{OrderService: &ServiceImpl{}}
   app.Run(19)
 }
