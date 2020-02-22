@@ -16,13 +16,13 @@ SOLIDの原則は次の用語リストに挙げた5つのソフトウェア設�
 #@# textlint-disable
  : @<kw>{単一責任の原則}（@<kw>{SRP}, @<tti>{Single responsibility principle}）
     クラスを変更する理由は1つ以上存在してはならない。@<fn>{agile_srp}
- : @<kw>{開放閉鎖の原則}（@<kw>{OCP}, @<tti>{Open–closed principle}）
+ : @<kw>{オープン・クローズドの原則}（@<kw>{OCP}, @<tti>{Open–closed principle}）
     ソフトウェアの構成要素構成要素（クラス、モジュール、関数など）は拡張に対して開いて（オープン: Oepn）いて、修正に対して閉じて（クローズド: Closed）いなければならない。@<fn>{agile_ocp}
  : @<kw>{リスコフの置換原則}（@<kw>{LSP}, @<tti>{Liskov substitution principle}）
     @<tt>{S}型のオブジェクト@<tt>{o1}の各々に、対応する@<tt>{T}型のオブジェクト@<tt>{o2}が1つ存在し、@<tt>{T}を使って定義されたプログラム@<tt>{P}に対して@<tt>{o2}の代わりに@<tt>{o1}を使っても@<tt>{P}の振る舞いが変わらない場合、@<tt>{S}は@<tt>{T}の派生型であると言える。@<fn>{agile_lsp}
  : インターフェイス分離の原則（@<kw>{ISP}, @<tti>{Interface segregation principle}）
     クライアントに、クライアントが利用しないメソッドへの依存を強制してはならない。@<fn>{agile_isp}
- : @<kw>{依存性逆転の原則}（@<kw>{DIP},  @<tti>{Dependency inversion principle}）
+ : @<kw>{依存関係逆転の原則}（@<kw>{DIP},  @<tti>{Dependency inversion principle}）
     上位のモジュールは下位のモジュールに依存してはならない。どちらのモジュールも「抽象」に依存すべきである。「抽象」は実装の詳細に依存してはならない。実装の詳細が「抽象」に依存すべきである。@<fn>{agile_dip}
 #@# textlint-enable
 
@@ -111,7 +111,7 @@ Goでは埋込み（@<i>{Embedding}@<fn>{embedding}）を使って別の型に�
 しかし、これは多態性や共変性・反変性@<fn>{convariance}を満たしません。
 よって、埋め込みはオブジェクト指向で期待される継承ではなくコンポジションにすぎません。
 @<list>{go_person}は@<list>{person}をGoで書き直したものです。
-この例では、@<code>{Japanese}型のオブジェクトは@<code>{Hello}関数に利用することはできません。
+@<list>{go_person}の例では、@<code>{Japanese}型のオブジェクトは@<code>{Hello}関数に利用することはできません。
 
 //list[go_person][Goで@<list>{person}のような親子関係を表現する場合]{
 type Person struct {
@@ -132,6 +132,8 @@ func Hello(p Person) {
 以上の例以外にも、@<kw>{リスコフの置換原則}などの一部のSOLIDの原則をそのままGoに適用することはできません。
 しかし、SOLIDの原則のベースとなる考えを取り入れることでよりシンプルで可用性の高いGoのコードを書くことは可能です。
 
+それでは、次節よりGoのコードにSOLIDの原則を適用していくとどうなっていくか見ていきます。
+
 
 //footnote[convariance][@<href>{https://docs.microsoft.com/ja-jp/dotnet/csharp/programming-guide/concepts/covariance-contravariance/}]
 //footnote[embedding][@<href>{https://golang.org/doc/effective_go.html#embedding}]
@@ -146,17 +148,37 @@ Goが@<kw>{実装継承}をサポートしなかった理由は明らかにな�
 
 ===[/column]
 
-== ここから書けていない。
+== @<kw>{単一責任の原則}（@<kw>{SRP}, @<tti>{Single responsibility principle}）
+//quote{
+クラスを変更する理由は1つ以上存在してはならない。
+//}
 
-#@# textlint-disable
-雑メモの塊なので静的解析対象外。
-一番の大きな差異としてGoは
+ここでは@<tt>{アジャイルソフトウェア開発の奥義}の原文どおりに「クラスを…」とそのまま引用しましたが、
+@<kw>{単一責任の原則}はさまざまな粒度で考えなければいけない問題です。
+関数・メソッド単位ならば比較的考えやすそうです。パッケージや型（クラス）の単位になってくると
 
-== SRP
+
+変更理由が1つしか存在しないということは、そのクラスの役割（責任）がひとつであることを意味します。
+では、「このクラスの役割が1つである」と判断するにはどうすればよいのでしょうか？
+たとえば、「コンロ」をモデリングするとき、コンロには「火を付ける」機能と「火を消す」機能の2つを与えると思います。
+これは「役割が2つある」状態でしょうか？
+
+@<tt>{アジャイルソフトウェア開発の奥義}では、この判断基準を
+
 Adaptorパターン、Decoratorパターン、Compositeパターン
 
-== オープンクローズドの法則
-アジャイル開発の奥義
+== @<kw>{オープン・クローズドの原則}（@<kw>{OCP}, @<tti>{Open–closed principle}）
+//quote{
+ソフトウェアの構成要素構成要素（クラス、モジュール、関数など）は拡張に対して開いて（オープン: Oepn）いて、修正に対して閉じて（クローズド: Closed）いなければならない。
+//}
+
+　大抵のソースコードは完成後に（あるいは作成中でも）機能追加・仕様の変更・あるいは仕様漏れの対応で機能の修正あるいは拡張が発生します。
+このとき「硬い」設計のソフトウェアは変更に対して大きな修正・そして副作用が発生します。
+変更・拡張に対して柔軟である一方で、修正の副作用に対して強固であるべきです。
+それを表す原則が@<kw>{オープン・クローズドの原則}（@<tt>{OCP}）の原則です。
+
+　@<tt>{OCP}の原則は
+
 
 ソフトウェアエンティティは、拡張に大して開いていなければならず、変更に対して閉じていなければならない。
 #@# textlint-enable
@@ -166,7 +188,18 @@ Adaptorパターン、Decoratorパターン、Compositeパターン
 「変更に対して閉じている」。モジュールの振る舞いを拡張した結果として、モジュールのソースやバイナリコードで変更が発生しない。モジュールのバイナリコードは、リンク可能なライブラリなのか、DLIなのか、Javaの@<tt>{.jar}なのかにかかわらず、変更されないままとなる。
 #@# textlint-enable
 #@# textlint-disable
-== リスコフ
+
+
+#@# textlint-disable
+== ここから書けていない。
+
+
+== @<kw>{リスコフの置換原則}（@<kw>{LSP}, @<tti>{Liskov substitution principle}）
+//quote{
+@<tt>{S}型のオブジェクト@<tt>{o1}の各々に、対応する@<tt>{T}型のオブジェクト@<tt>{o2}が1つ存在し、@<tt>{T}を使って定義されたプログラム@<tt>{P}に対して@<tt>{o2}の代わりに@<tt>{o1}を使っても@<tt>{P}の振る舞いが変わらない場合、@<tt>{S}は@<tt>{T}の派生型であると言える。
+//}
+
+
 
 SがTの派生型であるとすれば、T型のオブジェクトをS型のオブジェクトと置き換えたとしても、プログラムは動作し続けるはずである。
 Barbara Liskov
@@ -179,18 +212,236 @@ Barbara Liskov
 
 DaveはどうやってGoに紐付けたか。
 
-== インターフェース分離の原則
+== インターフェイス分離の原則（@<kw>{ISP}, @<tti>{Interface segregation principle}）
+
+//quote{
+クライアントに、クライアントが利用しないメソッドへの依存を強制してはならない。
+//}
+
 ファサード。
 
-== 依存性反転の原則
+== @<kw>{依存関係逆転の原則}（@<kw>{DIP}, @<tti>{Dependency inversion principle}）
+//quote{
+上位のモジュールは下位のモジュールに依存してはならない。どちらのモジュールも「抽象」に依存すべきである。「抽象」は実装の詳細に依存してはならない。実装の詳細が「抽象」に依存すべきである。
+//}
+
+ここまで見てきたとおり、拡張性が高く副作用に強いソフトウェアを実現するための鍵は構造化と境界です。
+対象を型あるいはパッケージとして構造化し、それぞれの境界を疎結合にすることで柔軟な設計を実現できます。
+型同士、あるいはパッケージ同士を疎結合にするための考え方が@<kw>{依存関係逆転の原則}です。
+Goの標準パッケージ内で具体例を確認します。
+
+=== @<code>{database/sql/driver}パッケージと@<kw>{DIP}
+
+　Goの標準パッケージでは、@<code>{database/sql/driver}パッケージが@<kw>{DIP}を利用した典型的な設計です。
+通常のGopherはGoから@<tt>{MySQL}などの@<tt>{RDBMS}を操作する際は@<code>{database/sql}パッケージを介した操作をします。
+この@<code>{database/sql}パッケージに各ベンダー、OSSの個別仕様に対応する具体的な実装は含まれていません。
+では、どのように@<tt>{MySQL}や@<tt>{PostgreSQL}を操作するかというと
+@<list>{import_mysql}のように各@<tt>{RDBMS}に対応したドライバーパッケージを@<tt>{import}します。
+
+
+//list[import_mysql][GoでMySQLを操作する際の@<code>{import}文]{
+import (
+  "database/sql"
+  _ "github.com/go-sql-driver/mysql"
+)
+//}
+
+@<code>{github.com/go-sql-driver/mysql}のようなドライバーパッケージは@<code>{database/sql/driver}パッケージ内の@<code>{database/sql/driver.Driver}インターフェースなどを実装しています。
+RDBMSごとの@<kw>{実装の詳細}が上位概念が提供している@<kw>{インターフェースに依存}しています。
+（ほぼありえないでしょうが、）もし@<code>{database/sql/driver}パッケージのインターフェースが変更された場合、すべてのドライバーパッケージがインターフェースの変更に追従を迫られるでしょう。
+このような下位の実装の詳細が上位概念（@<code>{database/sql/driver}パッケージ）の抽象へ依存している関係を@<kw>{依存関係逆転の原則}と呼びます。
+
+
+=== @<kw>{DIP}に準拠した実装
+　では、実際の我々の設計や書く実装コードで@<tt>{DIP}の考えを生かすとどのようになるのでしょうか。
+よく耳にする実装パターンとしては、依存性の注入（@<kw>{DI}, @<kw>{Dependency Injection}）パターン@<fn>{wiki_di}やリポジトリパターン@<fn>{repository}でしょう。
+リポジトリパターンは永続化データへのアクセスに関する@<tt>{DI}と呼べるでしょう。
+
+==== 依存性の注入（@<kw>{Dependency Injection}）
+@<kw>{依存性の注入}（@<kw>{DI}）は@<kw>{DIP}を実施するためのオーソドックスな手段です。
+JavaやC#などにはクラスのフィールド定義にアノテーションをつけるだけでオブジェクト（下位モジュールの詳細）をセット（注入）してくれるような、フレームワークが提供するデファクトな仕組みが存在します。
+Goの場合はインターフェースで抽象を定義し、初期化時などに具体的な実装の詳細オブジェクトを設定することが大半です。
+
+代表的な@<kw>{DI}の実装としては、次のような実装パターンがあります。
+
+ * オブジェクト初期化時に@<kw>{DI}する方法
+ * @<code>{setter}を用意しておいて、@<kw>{DI}する方法
+ * メソッド（関数）呼び出し時に@<kw>{DI}する方法
+
+@<list>{di_const}は他の言語ではコンストラクタインジェクションと呼ばれる手法です。
+上位階層のオブジェクトを初期化する際に@<tt>{DI}を実行します。
+こちらだけ覚えておくだけでも十分に役立つでしょう。
+
+//list[di_const][オブジェクト初期化時に@<kw>{DI}する方法]{
+// 実装の詳細
+type ServiceImpl struct{}
+
+func (s *ServiceImpl) Apply(id int) error { return nil }
+
+// 上位階層が定義する抽象
+type OrderService interface {
+  Apply(int) error
+}
+
+// 上位階層の利用者側の型
+type Application struct {
+  os OrderService
+}
+
+// 他言語のコンストラクタインジェクションに相当する実装
+func NewApplication(os OrderService) *Application {
+  return &Application{os: os}
+}
+
+func (app *Application) Apply(id int) error {
+  return app.os.Apply(id)
+}
+
+func main() {
+  app := NewApplication(&ServiceImpl{})
+  app.Apply(19)
+}
+//}
+
+@<list>{di_setter}は@<code>{setter}メソッドを用意していおくことで、初期化と実処理の間に依存性を注入する方法です。
+
+//list[di_setter][@<code>{setter}を用意しておいて、@<kw>{DI}する方法]{
+func (app *Application) Apply(id int) error {
+  return app.os.Apply(id)
+}
+
+
+func (app *Application) SetService(os OrderService) {
+  app.os = os
+}
+
+func main() {
+  app := &Application{}
+  app.Set(&ServiceImpl{})
+  app.Apply(19)
+}
+//}
+
+@<list>{di_method}はメソッド（関数）の引数として依存を渡す方法です。上位階層のオブジェクトのライフサイクルと、実装の詳細のオブジェクトの生成タイミングが異なるときはこの手法をとります。
+//list[di_method][メソッド（関数）呼び出し時に@<kw>{DI}する方法]{
+func (app *Application) Apply(os OrderService, id int) error {
+  return os.Apply(id)
+}
+
+func main() {
+  app := &Application{}
+  app.Apply(&ServiceImpl{}, 19)
+}
+//}
+
+以上のような@<tt>{DI}は他の言語でもみられる共通手法のような実装です。
+この他にもGoでは次のような実装で@<tt>{DIP}を満たすことも可能です。
+
+
+=== 埋込み型を利用した@<tt>{DIP}
+
+//list[label][title]{
+type OrderService interface {
+  Apply(int) error
+}
+
+type ServiceImpl struct{}
+
+func (s *ServiceImpl) Apply(id int) error { return nil }
+
+type Application struct {
+  OrderService // 埋め込みinterface
+}
+
+func (app *Application) Run(id int) error {
+  return app.Apply(id)
+}
+
+func main() {
+  app := &Application{OrderService: &ServiceImpl{}}
+  app.Run(19)
+}
+//}
+
+=== @<tt>{interface}を利用しない@<tt>{DIP}
+@<tt>{DIP}では型の継承関係が利用されることが多いです。
+しかし、構造体を定義せずに関数型を用意するだけでも実現が可能です。
+@<list>{di_func}は@<code>{Application}構造体に@<code>{func(int) error}型の@<code>{Apply}フィールドを定義しています。
+@<code>{Apply}フィールドは実装に依存しない抽象です。
+@<code>{Apply}フィールドに実行時に実装を注入することで@<tt>{DIP}を実現しています。
+
+//list[di_func][関数型を利用した@<tt>{DI}]{
+func CutomApply(id int) error { return nil }
+
+type Application struct {
+  Apply func(int) error
+}
+
+func (app *Application) Run(id int) error {
+  return app.Apply(id)
+}
+
+func main() {
+  app := &Application{Apply: CutomApply}
+  app.Run(19)
+}
+//}
+
+Goは@<kw>{単純さ}であることが言語思想にあるため、高度な（コードから挙動が予想できないような）@<kw>{DI}ツールはあまり使われていない印象です。
+@<kw>{DI}用のコードを自動生成する@<tt>{google/wire}フレームワーク@<fn>{wire}も存在しますが、
+これもコンストラクタインジェクション用のコードを自動生成するだけです。
+
+
+//footnote[wire][@<href>{https://github.com/google/wire}]
+
+//footnote[wiki_di][@<href>{https://en.wikipedia.org/wiki/Dependency_injection}]
+//footnote[repository][@<href>{https://martinfowler.com/eaaCatalog/repository.html}]
+
+
+
 poor man Adaptorパターン。Responsible Ownerパターン、Factory Isolationパターン
 Illegitimate Injectionパターン。
 ここまで雑メモ
+
+
+
+
 #@# textlint-enable
+
+== まとめ
+　本章では、SOLIDの原則のおさらいをしました。
+そして、SOLIDの原則の各原則がGoのプログラミングの中でどう表出されるのか確かめました。
+Goは一般にオブジェクト指向言語と呼ばれるプログラミング言語がもつ特徴を十分に備えていません。
+そのようなGoでもオブジェクト指向設計のプラクティスや原則を守ることで、よりよいいコードを書くことができます。
+
+　ただし、早すぎたり過剰な抽象化はソースコードの可読性を下げたり、手戻りが発生しやすくなります。
+とくに、@<code>{interface}を使った過剰な抽象化には注意が必要です。
+Goはインターフェースを使ったダックタイピングを採用しているため、次の箇条書きの情報を得るにはIDEなどの助けが必要になります。
+
+ * ある@<tt>{struct}がどの@<code>{interface}を継承しているのか
+ * ある@<code>{interface}を継承している@<tt>{struct}はどれだけ存在しているのか
+
+@<list>{ensure_interface}は@<code>{Knight}型が@<code>{Jedi}インターフェースを満たしているか、コンパイル時に検証させる方法です@<fn>{ensure}。
+このようなプラクティスはあるものの、過剰な抽象化は
+
+//list[ensure_interface][コンパイラを使った実装チェック]{
+type Jedi interface {
+    HasForce() bool
+}
+
+type Knight struct {}
+
+// このままではコンパイルエラーになるので、継承関係がないことがわかる。
+var _ Jedi = (*Knight)(nil)
+//}
+
+//footnote[ensure][@<href>{https://splice.com/blog/golang-verify-type-implements-interface-compile-time/}]
 
 
 
 == 参考文献
+最後に、本章を執筆するにあたって参考にした書籍を挙げておきます。
+
  * アジャイルソフトウェア開発の奥義 第2版 オブジェクト指向開発の神髄と匠の技
  ** @<href>{https://www.amazon.co.jp/dp/4797347783}
  * Effective Java 第3版
