@@ -17,7 +17,7 @@ SOLIDの原則は次の用語リストに挙げた5つのソフトウェア設�
  : @<kw>{単一責任の原則}（@<kw>{SRP}, @<tti>{Single responsibility principle}）
     クラスを変更する理由は1つ以上存在してはならない。@<fn>{agile_srp}
  : @<kw>{オープン・クローズドの原則}（@<kw>{OCP}, @<tti>{Open–closed principle}）
-    ソフトウェアの構成要素構成要素（クラス、モジュール、関数など）は拡張に対して開いて（オープン: Oepn）いて、修正に対して閉じて（クローズド: Closed）いなければならない。@<fn>{agile_ocp}
+    ソフトウェアの構成要素構成要素（クラス、モジュール、関数など）は拡張に対して開いて（オープン: Open）いて、修正に対して閉じて（クローズド: Closed）いなければならない。@<fn>{agile_ocp}
  : @<kw>{リスコフの置換原則}（@<kw>{LSP}, @<tti>{Liskov substitution principle}）
     @<tt>{S}型のオブジェクト@<tt>{o1}の各々に、対応する@<tt>{T}型のオブジェクト@<tt>{o2}が1つ存在し、@<tt>{T}を使って定義されたプログラム@<tt>{P}に対して@<tt>{o2}の代わりに@<tt>{o1}を使っても@<tt>{P}の振る舞いが変わらない場合、@<tt>{S}は@<tt>{T}の派生型であると言える。@<fn>{agile_lsp}
  : インターフェイス分離の原則（@<kw>{ISP}, @<tti>{Interface segregation principle}）
@@ -220,6 +220,10 @@ DaveはどうやってGoに紐付けたか。
 
 ファサード。
 
+
+== ここまで書けていない
+#@# textlint-enable
+
 == @<kw>{依存関係逆転の原則}（@<kw>{DIP}, @<tti>{Dependency inversion principle}）
 //quote{
 上位のモジュールは下位のモジュールに依存してはならない。どちらのモジュールも「抽象」に依存すべきである。「抽象」は実装の詳細に依存してはならない。実装の詳細が「抽象」に依存すべきである。
@@ -368,7 +372,7 @@ func main() {
 しかし、構造体を定義せずに関数型を用意するだけでも実現が可能です。
 @<list>{di_func}は@<code>{Application}構造体に@<code>{func(int) error}型の@<code>{Apply}フィールドを定義しています。
 @<code>{Apply}フィールドは実装に依存しない抽象です。
-@<code>{Apply}フィールドに実行時に実装を注入することで@<tt>{DIP}を実現しています。
+@<code>{Apply}フィールドに実行時に関数の実装を注入することで@<tt>{DIP}を実現しています。
 
 //list[di_func][関数型を利用した@<tt>{DI}]{
 func CutomApply(id int) error { return nil }
@@ -387,7 +391,9 @@ func main() {
 }
 //}
 
-Goは@<kw>{単純さ}であることが言語思想にあるため、高度な（コードから挙動が予想できないような）@<kw>{DI}ツールはあまり使われていない印象です。
+=== 高度なツールやフレームワークを使った@<tt>{DIP}
+
+Goは@<kw>{単純}であることが言語思想@<fn>{simplicity}にあるため、（ソースコードに書いてある以上の挙動を裏で実行するような）高度な@<kw>{DI}ツールはあまり使われていない印象です。
 @<kw>{DI}用のコードを自動生成する@<tt>{google/wire}フレームワーク@<fn>{wire}も存在しますが、
 これもコンストラクタインジェクション用のコードを自動生成するだけです。
 
@@ -396,17 +402,7 @@ Goは@<kw>{単純さ}であることが言語思想にあるため、高度な�
 
 //footnote[wiki_di][@<href>{https://en.wikipedia.org/wiki/Dependency_injection}]
 //footnote[repository][@<href>{https://martinfowler.com/eaaCatalog/repository.html}]
-
-
-
-poor man Adaptorパターン。Responsible Ownerパターン、Factory Isolationパターン
-Illegitimate Injectionパターン。
-ここまで雑メモ
-
-
-
-
-#@# textlint-enable
+//footnote[simplicity][@<href>{https://employment.en-japan.com/engineerhub/entry/2018/06/19/110000}]
 
 == まとめ
 　本章では、SOLIDの原則のおさらいをしました。
