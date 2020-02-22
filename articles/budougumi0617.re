@@ -1,14 +1,10 @@
-= GoにおけるSOLID
-
+= GoにおけるSOLIDの原則
 @<tt>{@budougumi0617}@<fn>{bd617_twitter}です。
-#@# textlint-disable
-オブジェクト指向設計の原則を5つまとめた@<kw>{SOLIDの原則}@<fn>{solid}（@<tti>{the SOLID principles}）という設計指針があることはみなさんご存じかと思います。
-#@# textlint-enable
+オブジェクト指向設計の原則を5つまとめた@<kw>{SOLIDの原則}@<fn>{solid}（@<tti>{the SOLID principles}）という設計指針があることはみなさんご存じでしょう。
 本章ではSOLIDの原則にのっとったGoの実装について考えます。
 
 //footnote[bd617_twitter][@<href>{https://twitter.com/budougumi0617}]
 //footnote[solid][@<href>{https://ja.wikipedia.org/wiki/SOLID}]
-
 
 == @<kw>{SOLIDの原則}（@<tti>{the SOLID principles}）とは
 SOLIDの原則は次の用語リストに挙げた5つのソフトウェア設計の原則の頭文字をまとめたものです。
@@ -154,25 +150,28 @@ Goが@<kw>{実装継承}をサポートしなかった理由は明らかにな�
 //}
 
 ここでは@<tt>{アジャイルソフトウェア開発の奥義}の原文どおりに「クラスを…」とそのまま引用しましたが、
-@<kw>{単一責任の原則}はさまざまな粒度で考えなければいけない問題です。
-関数・メソッド単位ならば比較的考えやすそうです。パッケージや型（クラス）の単位になってくると
-
+@<kw>{単一責任の原則}はさまざまな大小の粒度で考えなければいけない問題です。
+関数・メソッド単位の粒度ならば比較的考えやすそうです。
+ドメインやパッケージの単位の単一責任になってくると一概にいえるものではなくなり、議論が始まるでしょう。
 
 変更理由が1つしか存在しないということは、そのクラスの役割（責任）がひとつであることを意味します。
-では、「このクラスの役割が1つである」と判断するにはどうすればよいのでしょうか？
-たとえば、「コンロ」をモデリングするとき、コンロには「火を付ける」機能と「火を消す」機能の2つを与えると思います。
-これは「役割が2つある」状態でしょうか？
+では、「このクラスの役割が1つである」と判断するにはどうすればよいのでしょうか。
+たとえば、「コンロ」をモデリングするとき、コンロには「火を付ける」機能と「火を消す」機能の2つが与えるでしょう。
+これは「役割が2つある」状態でしょうか。
+
+#@# textlint-disable
+#@# ここから下は書けていない。
 
 @<tt>{アジャイルソフトウェア開発の奥義}では、この判断基準を
 
-Adaptorパターン、Decoratorパターン、Compositeパターン
+Adaptorパターン、Decoratorパターン、Compositeパターン。
 
 == @<kw>{オープン・クローズドの原則}（@<kw>{OCP}, @<tti>{Open–closed principle}）
 //quote{
 ソフトウェアの構成要素構成要素（クラス、モジュール、関数など）は拡張に対して開いて（オープン: Oepn）いて、修正に対して閉じて（クローズド: Closed）いなければならない。
 //}
 
-　大抵のソースコードは完成後に（あるいは作成中でも）機能追加・仕様の変更・あるいは仕様漏れの対応で機能の修正あるいは拡張が発生します。
+　たいていのソースコードは完成後に（あるいは作成中でも）機能追加・仕様の変更・あるいは仕様漏れの対応で機能の修正あるいは拡張が発生します。
 このとき「硬い」設計のソフトウェアは変更に対して大きな修正・そして副作用が発生します。
 変更・拡張に対して柔軟である一方で、修正の副作用に対して強固であるべきです。
 それを表す原則が@<kw>{オープン・クローズドの原則}（@<tt>{OCP}）の原則です。
@@ -190,8 +189,7 @@ Adaptorパターン、Decoratorパターン、Compositeパターン
 #@# textlint-disable
 
 
-#@# textlint-disable
-#@# ここから下は書けていない。
+
 
 
 == @<kw>{リスコフの置換原則}（@<kw>{LSP}, @<tti>{Liskov substitution principle}）
@@ -231,7 +229,7 @@ DaveはどうやってGoに紐付けたか。
 
 ここまで見てきたとおり、拡張性が高く副作用に強いソフトウェアを実現するための鍵は構造化と境界です。
 対象を型あるいはパッケージとして構造化し、それぞれの境界を疎結合にすることで柔軟な設計を実現できます。
-型同士、あるいはパッケージ同士を疎結合にするための考え方が@<kw>{依存関係逆転の原則}です。
+型同士、またはパッケージ同士を疎結合にするための考え方が@<kw>{依存関係逆転の原則}です。
 Goの標準パッケージ内で具体例を確認します。
 
 === @<code>{database/sql/driver}パッケージと@<kw>{DIP}
@@ -240,7 +238,7 @@ Goの標準パッケージ内で具体例を確認します。
 通常のGopherはGoから@<tt>{MySQL}などの@<tt>{RDBMS}を操作する際は@<code>{database/sql}パッケージを介した操作をします。
 この@<code>{database/sql}パッケージに各ベンダー、OSSの個別仕様に対応する具体的な実装は含まれていません。
 では、どのように@<tt>{MySQL}や@<tt>{PostgreSQL}を操作するかというと
-@<list>{import_mysql}のように各@<tt>{RDBMS}に対応したドライバーパッケージを@<tt>{import}します。
+@<list>{import_mysql}のように各@<tt>{RDBMS}に対応したドライバパッケージを@<tt>{import}します。
 
 
 //list[import_mysql][GoでMySQLを操作する際の@<code>{import}文]{
@@ -249,17 +247,22 @@ import (
   _ "github.com/go-sql-driver/mysql"
 )
 //}
-
-@<code>{github.com/go-sql-driver/mysql}のようなドライバーパッケージは@<code>{database/sql/driver}パッケージ内の@<code>{database/sql/driver.Driver}インターフェースなどを実装しています。
+#@# textlint-disable
+@<code>{github.com/go-sql-driver/mysql}のようなドライバパッケージは@<code>{database/sql/driver}パッケージ内の@<code>{database/sql/driver.Driver}インターフェースなどを実装しています。
+#@# textlint-enable
 RDBMSごとの@<kw>{実装の詳細}が上位概念が提供している@<kw>{インターフェースに依存}しています。
-（ほぼありえないでしょうが、）もし@<code>{database/sql/driver}パッケージのインターフェースが変更された場合、すべてのドライバーパッケージがインターフェースの変更に追従を迫られるでしょう。
+（ほぼありえないでしょうが、）もし@<code>{database/sql/driver}パッケージのインターフェースが変更された場合、すべてのドライバパッケージがインターフェースの変更に追従を迫られるでしょう。
 このような下位の実装の詳細が上位概念（@<code>{database/sql/driver}パッケージ）の抽象へ依存している関係を@<kw>{依存関係逆転の原則}と呼びます。
 
 
 === @<kw>{DIP}に準拠した実装
-　では、実際の我々の設計や書く実装コードで@<tt>{DIP}の考えを生かすとどのようになるのでしょうか。
+　では、実際の我々の設計や書く実装コードで@<tt>{DIP}の考えを活かすとどのようになるのでしょうか。
 よく耳にする実装パターンとしては、依存性の注入（@<kw>{DI}, @<kw>{Dependency Injection}）パターン@<fn>{wiki_di}やリポジトリパターン@<fn>{repository}でしょう。
 リポジトリパターンは永続化データへのアクセスに関する@<tt>{DI}と呼べるでしょう。
+
+
+//footnote[wiki_di][@<href>{https://en.wikipedia.org/wiki/Dependency_injection}]
+//footnote[repository][@<href>{https://martinfowler.com/eaaCatalog/repository.html}]
 
 ==== 依存性の注入（@<kw>{Dependency Injection}）
 @<kw>{依存性の注入}（@<kw>{DI}）は@<kw>{DIP}を実施するためのオーソドックスな手段です。
@@ -272,7 +275,7 @@ Goの場合はインターフェースで抽象を定義し、初期化時など
  * @<code>{setter}を用意しておいて、@<kw>{DI}する方法
  * メソッド（関数）呼び出し時に@<kw>{DI}する方法
 
-@<list>{di_const}は他の言語ではコンストラクタインジェクションと呼ばれる手法です。
+@<list>{di_const}はほかの言語ではコンストラクタインジェクションと呼ばれる手法です。
 上位階層のオブジェクトを初期化する際に@<tt>{DI}を実行します。
 こちらだけ覚えておくだけでも十分に役立つでしょう。
 
@@ -326,7 +329,7 @@ func main() {
 }
 //}
 
-@<list>{di_method}はメソッド（関数）の引数として依存を渡す方法です。上位階層のオブジェクトのライフサイクルと、実装の詳細のオブジェクトの生成タイミングが異なるときはこの手法をとります。
+@<list>{di_method}はメソッド（関数）の引数として依存を渡す方法です。上位階層のオブジェクトのライフサイクルと、実装の詳細のオブジェクトの生成タイミングが異なるときはこの手法を取り巻す。
 //list[di_method][メソッド（関数）呼び出し時に@<kw>{DI}する方法]{
 func (app *Application) Apply(os OrderService, id int) error {
   return os.Apply(id)
@@ -403,9 +406,6 @@ Goは@<kw>{単純}であることが言語思想@<fn>{simplicity}にあるため
 
 
 //footnote[wire][@<href>{https://github.com/google/wire}]
-
-//footnote[wiki_di][@<href>{https://en.wikipedia.org/wiki/Dependency_injection}]
-//footnote[repository][@<href>{https://martinfowler.com/eaaCatalog/repository.html}]
 //footnote[simplicity][@<href>{https://employment.en-japan.com/engineerhub/entry/2018/06/19/110000}]
 
 == まとめ
