@@ -6,7 +6,7 @@
 //footnote[bd617_twitter][@<href>{https://twitter.com/budougumi0617}]
 //footnote[solid][@<href>{https://ja.wikipedia.org/wiki/SOLID}]
 
-== @<kw>{SOLIDの原則}（@<tti>{the SOLID principles}）とは
+== @<kw>{SOLIDの原則}（@<tt>{the SOLID principles}）とは
 SOLIDの原則は次の用語リストに挙げた5つのソフトウェア設計の原則の頭文字をまとめたものです。
 
 #@# textlint-disable
@@ -66,7 +66,7 @@ Also, the lack of a type hierarchy makes “objects” in Go feel much more ligh
 あいまいな回答にはなっていますが、「Yesであり、Noでもある。」という回答です。
 Goはオブジェクト指向の3大要素を一部しか取り入れていないため、このような回答になっています。
 
-=== Goはサブクラシング（@<tti>{subclassing}）に対応していない
+=== Goはサブクラシング（@<tt>{subclassing}）に対応していない
 多くの方がオブジェクト指向言語に期待する仕組みの1つとして、先ほど引用した回答内にもある@<kw>{サブクラシング}（@<i>{subclassing}）が挙げられるでしょう。
 もっと平易な言葉で言い直すと、@<tt>{クラス（型）の階層構造（親子関係）による継承}です。
 代表的なオブジェクト指向言語である@<tt>{Java}でサブクラシングの例を書いたコードが@<list>{person}です。
@@ -144,7 +144,7 @@ Goが@<kw>{実装継承}をサポートしなかった理由は明らかにな�
 
 ===[/column]
 
-== @<kw>{単一責任の原則}（@<kw>{SRP}, @<tti>{Single responsibility principle}）
+== @<kw>{単一責任の原則}（@<kw>{SRP}, @<tt>{Single responsibility principle}）
 //quote{
 クラスを変更する理由は1つ以上存在してはならない。
 //}
@@ -166,7 +166,7 @@ Goが@<kw>{実装継承}をサポートしなかった理由は明らかにな�
 
 Adaptorパターン、Decoratorパターン、Compositeパターン。
 
-== @<kw>{オープン・クローズドの原則}（@<kw>{OCP}, @<tti>{Open–closed principle}）
+== @<kw>{オープン・クローズドの原則}（@<kw>{OCP}, @<tt>{Open–closed principle}）
 //quote{
 ソフトウェアの構成要素構成要素（クラス、モジュール、関数など）は拡張に対して開いて（オープン: Oepn）いて、修正に対して閉じて（クローズド: Closed）いなければならない。
 //}
@@ -192,7 +192,7 @@ Adaptorパターン、Decoratorパターン、Compositeパターン。
 
 
 
-== @<kw>{リスコフの置換原則}（@<kw>{LSP}, @<tti>{Liskov substitution principle}）
+== @<kw>{リスコフの置換原則}（@<kw>{LSP}, @<tt>{Liskov substitution principle}）
 //quote{
 @<tt>{S}型のオブジェクト@<tt>{o1}の各々に、対応する@<tt>{T}型のオブジェクト@<tt>{o2}が1つ存在し、@<tt>{T}を使って定義されたプログラム@<tt>{P}に対して@<tt>{o2}の代わりに@<tt>{o1}を使っても@<tt>{P}の振る舞いが変わらない場合、@<tt>{S}は@<tt>{T}の派生型であると言える。
 //}
@@ -210,7 +210,7 @@ Barbara Liskov
 
 DaveはどうやってGoに紐付けたか。
 
-== インターフェイス分離の原則（@<kw>{ISP}, @<tti>{Interface segregation principle}）
+== インターフェイス分離の原則（@<kw>{ISP}, @<tt>{Interface segregation principle}）
 
 //quote{
 クライアントに、クライアントが利用しないメソッドへの依存を強制してはならない。
@@ -222,7 +222,7 @@ DaveはどうやってGoに紐付けたか。
 #@# ここから上まで書けていない
 #@# textlint-enable
 
-== @<kw>{依存関係逆転の原則}（@<kw>{DIP}, @<tti>{Dependency inversion principle}）
+== @<kw>{依存関係逆転の原則}（@<kw>{DIP}, @<tt>{Dependency inversion principle}）
 //quote{
 上位のモジュールは下位のモジュールに依存してはならない。どちらのモジュールも「抽象」に依存すべきである。「抽象」は実装の詳細に依存してはならない。実装の詳細が「抽象」に依存すべきである。
 //}
