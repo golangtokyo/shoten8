@@ -211,13 +211,92 @@ Barbara Liskov
 DaveはどうやってGoに紐付けたか。
 
 == インターフェイス分離の原則（@<kw>{ISP}, @<tt>{Interface segregation principle}）
-
 //quote{
 クライアントに、クライアントが利用しないメソッドへの依存を強制してはならない。
 //}
 
-ファサード。
+Goは@<code>{ISP}に強く影響を受けている言語といえます。
+大きなインターフェース、複数のメソッドに依存していると他者の変更の影響を受ける可能性が高くなります。
+依存する対象が少なければ少ないほど、凝集性が高く疎結合な設計ができたと言えるでしょう。
+Goのプラクティスのひとつに@<tt>{インターフェースは可能な限り小さく作る}というものがあります。
+標準パッケージの@<code>{io}パッケージ@<fn>{io_reader}に含まれるインターフェースを見てみましょう。
+@<list>{io_reader}は@<code>{io}パッケージに含まれるインターフェースの定義の一部です。
 
+//footnote[io_reader][@<href>{https://golang.org/pkg/io}]
+
+//list[io_reader][@<code>{io}パッケージのインターフェース]{
+type Reader interface {
+    Read(p []byte) (n int, err error)
+}
+
+type Closer interface {
+    Close() error
+}
+
+type ReadCloser interface {
+    Reader
+    Closer
+}
+
+type ReadWriteSeeker interface {
+    Reader
+    Writer
+    Seeker
+}
+//}
+
+ベースとなる@<code>{io.Reader}インターフェースや@<code>{io.Closer}インターフェースは1つのメソッド定義しかないシンプルなインターフェースです。
+2つを合成した入力ストリーム操作用の@<code>{io.ReadCloser}インターフェースなども定義されています。
+@<code>{Read}操作と@<code>{Close}操作は入力ストリーム処理に対する必要最小限の機能のため、@<code>{io.ReadCloser}インターフェースも単一責任の原則も満たしている最小限の依存を提供になります。
+
+また、Goはダックタイピングによるインターフェースの継承を行うため、@<tt>{ISP}を考慮した設計が得意です。
+@<list>{sql_db}は@<code>{database/sql.DB}型の定義@<fn>{doc_sql_db}を抜粋したものです。
+
+//footnote[doc_sql_db][@<href>{https://golang.org/pkg/database/sql/#DB}]
+
+//list[sql_db][title]{
+type DB
+    func (db *DB) Begin() (*Tx, error)
+    func (db *DB) Conn(ctx context.Context) (*Conn, error)
+    func (db *DB) Exec(query string, args ...interface{}) (Result, error)
+    func (db *DB) Ping() error
+    func (db *DB) Query(query string, args ...interface{}) (*Rows, error)
+    // ...
+//}
+
+依存を最小にするため、インターフェースを経由して@<code>{database/sql.DB}の@<code>{Query}メソッドを扱いたいとします。
+@<code>{database/sql.DB}型には多くのメソッドが実装されていますが、必要なメソッドはひとつだけです。
+ここで、Goは標準パッケージだとしても自分で定義したインターフェースを使って利用することができます。
+よって@<code>{Query}メソッドしか利用しないならば、@<list>{sql_db}のように@<code>{Query}メソッドのみのインターフェースを定義すれば依存を最小限にできます。
+
+
+//list[gueryer][@<code>{Query}メソッドのみに依存して@<code>{sql.DB}を利用する]{
+type Querer interface {
+  Query(query string, args ...interface{}) (*Rows, error)
+}
+
+func GetAllUsers(q Querer) ([]User, error) {
+  rows, err :=  q.Query("SELECT id, name, ....")
+  if err != nil {
+    //...
+}
+
+func main() {
+   db, _ := sql.Open("mysql", "...")
+   users, err := GetAllUsers(db)
+}
+//}
+
+こうしておくことで、@<code>{sql.DB}型の他のメソッドが変更されたときでも
+@<code>{GetAllUsers}関数はその影響を受けることなく@<code>{sql.DB}型を利用することができます。
+このような設計方針が言語思想の中に存在するため、Goで@<kw>{ISP}は守りやすいです。
+Goの世界では、次の2点を厳守できていれば@<kw>{ISP}を守ったよいコードになるでしょう。
+
+ * 自分が使わないメソッドへの依存を避ける
+ * インターフェースは呼び出し元が都合の最小の設計にすること
+
+
+//footnote[change_db][Goは1.X系の間は破壊的変更は入らないので、実際にAPIインターフェースが変わることはないです。]
 
 #@# ここから上まで書けていない
 #@# textlint-enable
