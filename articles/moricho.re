@@ -48,7 +48,7 @@ Dockerなどコンテナ技術の中核を成すのが「コンテナランタ�
 //footnote[hyperkit][@<href>{https://github.com/moby/hyperkit}]
 //footnote[disc][@<href>{https://github.com/linuxkit/linuxkit/blob/master/docs/platform-hyperkit.md}]
 
-==={723} 異なるOSイメージを動かすためのキー
+==={osimagekey} 異なるOSイメージを動かすためのキー
 コンテナはOS機能すべてを再現するものではなく、あくまでも特定のディストリビューション上のアプリケーションの動きを再現するものです。そしてそのキーとなるものが「Linuxカーネル」と「ファイルシステム」です。
 
 ==== 1. Linuxカーネル
@@ -381,7 +381,7 @@ proc /proc proc rw,relatime 0 0
 //footnote[moby][@<href>{https://mobyproject.org/}]
 
 === ベースイメージとなるファイルシステムの展開
-@<hd>{723}で、こう説明しました。
+@<hd>{osimagekey}で、こう説明しました。
 
 //quote{
   「コンテナでは、あるOSと同じ状態のファイルシステムをプロセスに対して見せることで、そのOSさながらの環境を実現しています。」
