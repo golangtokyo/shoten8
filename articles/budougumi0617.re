@@ -168,6 +168,8 @@ func Hello(p Person) {
 
 Adaptorパターン、Decoratorパターン、Compositeパターン。
 
+#@# textlint-enable
+
 == @<kw>{オープン・クローズドの原則}（@<kw>{OCP}, @<tt>{Open–closed principle}）
 //quote{
 ソフトウェアの構成要素構成要素（クラス、モジュール、関数など）は拡張に対して開いて（オープン: Oepn）いて、修正に対して閉じて（クローズド: Closed）いなければならない。
@@ -178,18 +180,90 @@ Adaptorパターン、Decoratorパターン、Compositeパターン。
 変更・拡張に対して柔軟である一方で、修正の副作用に対して強固であるべきです。
 それを表す原則が@<kw>{オープン・クローズドの原則}（@<tt>{OCP}）の原則です。
 
-　@<tt>{OCP}の原則は
+=== @<tt>{コンポジション}で体感する@<tt>{OCP}
 
+@<tt>{Go}で@<tt>{OCP}を体感するのは、まず埋込み型によるコンポジションです。
+利用者側がインターフェース越しに構造体を利用していた場合、@<list>{ocp_decorator}のように拡張できます。
+コンポジションされている@<tt>{Item}構造体には何も修正をしていないので、変更に対して閉じているといえます。
 
-ソフトウェアエンティティは、拡張に大して開いていなければならず、変更に対して閉じていなければならない。
-#@# textlint-enable
+//list[ocp_decorator][@<tt>{Decorator}パターンで@<tt>{User}を拡張する]{
+type Item struct {
+  name  string
+  price int
+}
 
-#@# textlint-disable
-「拡張に対して開いている」。これは、モジュールの振る舞いを拡張できることを意味する。
-アプリケーションの要求が変化したら、それらの変更内容を満たす新しいふるまいでモジュールを拡張できる。言い換えれば、モジュールが実行することを変更できるのである。
-「変更に対して閉じている」。モジュールの振る舞いを拡張した結果として、モジュールのソースやバイナリコードで変更が発生しない。モジュールのバイナリコードは、リンク可能なライブラリなのか、DLIなのか、Javaの@<tt>{.jar}なのかにかかわらず、変更されないままとなる。
+func (i *Item) Price() int { return i.price }
 
-#@# textlint-enable
+func (i *Item) SetPrice(p int) { i.price = p }
+
+type ItemWithTax struct {
+  Item
+}
+
+func (i *ItemWithTax) Price() int {
+  return int(float64(i.Item.Price()) * 1.1)
+}
+//}
+
+=== @<tt>{switch}文で体感する@<tt>{OCP}
+
+ロジックの中でも@<tt>{OCP}の考えを適用できます。
+@<list>{before_ocp}は（あまり意味のない関数ですが、）受け取った演算子を使って計算をする@<tt>{Operation}関数です。
+@<tt>{Operation}関数は@<tt>{OCP}を満たしていません。
+新しく@<tt>{"*"}演算子に対応しようと思ったときに@<tt>{switch}文の修正が必要になるからです。
+これは、修正に対して閉じているとはいえません。
+
+//list[before_ocp][修正に対して閉じていない<tt>{Operation}関数]{
+func Operation(x, y int, op string) int {
+  var r int
+  switch op {
+  case "+":
+    r = x + y
+  case "-":
+    r = x - y
+  default:
+    // 異常系は省略
+  }
+  return r
+}
+//}
+
+@<tt>{OCP}の考えに基づいて修正した@<tt>{Operation}関数が@<list>{after_ocp}で書き直したものです。
+@<tt>{Operation}関数は修正に対して閉じているので、新しい演算子を追加しても修正が発生しません。
+@<tt>{ops}変数のマップに新しい演算子と計算関数を追加できるので、拡張にも開かれています。
+
+//list[after_ocp][@<tt>{OCP}に対応させた@<tt>{Operation}関数]{
+var ops = map[string]func(int, int) int{
+  "+": func(x int, y int) int {
+    return x + y
+  },
+  "-": func(x int, y int) int {
+    return x - y
+  },
+}
+
+func Operation(x, y int, op string) int {
+  if f, ok := ops[op]; ok {
+    return f(x, y)
+  }
+  return 0 // 異常系は省略
+}
+//}
+
+=== @<tt>{不必要な複雑さ}には注意すること
+@<tt>{OCP}を守るとコードは拡張しやすく、修正の影響を受けない堅牢な設計をできます。
+しかし最初からすべての変更を考慮することはできません。
+また、考慮しても実際に変更がおきず「不発」に終わってしまうこともあります。
+前節で修正した@<list>{after_ocp}のコードは@<tt>{OCP}に準拠しています。しかし、あのような変更でよかったのでしょうか。
+演算子の数はたかだか数個です。
+あのような変更をしなくても、素朴な実装だった修正前の@<list>{before_ocp}のほうがシンプルでわかりやすかったのではないでしょうか。
+
+　過剰な@<tt>{OCP}の適用は@<tt>{不必要な複雑さ}を生み出します。
+これは@<tt>{Go}の思想のベースにある@<tt>{単純さ}とも離れてしまいます。
+@<tt>{アジャイルソフトウェア開発の奥義}の@<tt>{9.4.5}節では「最初は変更が起きないこと」を設計するように述べられています。
+そして、実際に変更が発生したときに@<tt>{OCP}に沿った修正をすべきと続いています@<fn>{accerate_change}。
+
+//footnote[accerate_change][同時にテストファーストや短いサイクルでの開発で早期の変化の発生を促すことも助言しています。]
 
 == @<kw>{リスコフの置換原則}（@<kw>{LSP}, @<tt>{Liskov substitution principle}）
 //quote{
@@ -544,7 +618,7 @@ func main() {
 //footnote[wire][@<href>{https://github.com/google/wire}]
 //footnote[simplicity][@<href>{https://employment.en-japan.com/engineerhub/entry/2018/06/19/110000}]
 
-== まとめ
+== 終わりに
 　本章では、SOLIDの原則のおさらいをしました。
 そして、SOLIDの原則の各原則が@<tt>{Go}のプログラミングの中でどう表出されるのか確かめました。
 @<tt>{Go}は一般にオブジェクト指向言語と呼ばれるプログラミング言語がもつ特徴を十分に備えていません。
@@ -567,7 +641,7 @@ type Jedi interface {
 
 type Knight struct {}
 
-// このままではコンパイルエラーになるので、継承関係がないことがわかる。
+// このままではコンパイルエラーになるので、実装が不十分なことがわかる。
 var _ Jedi = (*Knight)(nil)
 //}
 
