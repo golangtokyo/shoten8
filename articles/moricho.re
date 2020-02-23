@@ -48,7 +48,7 @@ Dockerなどコンテナ技術の中核を成すのが「コンテナランタ�
 //footnote[hyperkit][@<href>{https://github.com/moby/hyperkit}]
 //footnote[disc][@<href>{https://github.com/linuxkit/linuxkit/blob/master/docs/platform-hyperkit.md}]
 
-=== 異なるOSイメージを動かすためのキー
+==={724} 異なるOSイメージを動かすためのキー
 コンテナはOS機能すべてを再現するものではなく、あくまでも特定のディストリビューション上のアプリケーションの動きを再現するものです。そしてそのキーとなるものが「Linuxカーネル」と「ファイルシステム」です。
 
 ==== 1. Linuxカーネル
@@ -273,7 +273,7 @@ func pivotRoot(newroot string) error {
 
 では@<list>{mount2}の@<code>{pivotRoot}関数はどのタイミングで実行すればよいでしょうか。
 もちろん名前空間が分離された後ですが、分離度の観点から、プロセスが起動し@<code>{/bin/sh}が実行されるよりも前がいいです。
-しかし@<list>{namespace1}で見たように、一度@<code>{cmd.Run}関数が呼ばれたら名前空間が分離され、そしてプロセスが実行されてしまいます。ここをうまく解決してくれるのが@<code>{reexec}パッケージです。
+しかし@<list>{namespace1}で見たように、一度@<code>{cmd.Run}メソッドが呼ばれたら名前空間が分離され、そしてプロセスが実行されてしまいます。ここをうまく解決してくれるのが@<code>{reexec}パッケージです。
 
 === reexecパッケージ
 
@@ -381,7 +381,7 @@ proc /proc proc rw,relatime 0 0
 //footnote[moby][@<href>{https://mobyproject.org/}]
 
 === ベースイメージとなるファイルシステムの展開
-「7.2.4 異なるOSイメージを動かすためのキー」で、こう説明しました。
+@<hd>{724}で、こう説明しました。
 
 //quote{
   「コンテナでは、あるOSと同じ状態のファイルシステムをプロセスに対して見せることで、そのOSさながらの環境を実現しています。」
