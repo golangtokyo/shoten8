@@ -99,38 +99,38 @@ Linuxには、プロセスごとにリソースを分離して提供する@<tt>{
 //list[namespace1][Namespaceの分離：main.go][go]{
 func main() {
   cmd := exec.Command("/bin/sh")
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags: syscall.CLONE_NEWUSER |
-			syscall.CLONE_NEWNET |
-			syscall.CLONE_NEWPID |
-			syscall.CLONE_NEWIPC |
-			syscall.CLONE_NEWUTS |
-			syscall.CLONE_NEWNS,
-		UidMappings: []syscall.SysProcIDMap{
-			{
-				ContainerID: 0,
-				HostID:      os.Getuid(),
-				Size:        1,
-			},
-		},
-		GidMappings: []syscall.SysProcIDMap{
-			{
-				ContainerID: 0,
-				HostID:      os.Getgid(),
-				Size:        1,
-			},
-		},
-	}
+  cmd.SysProcAttr = &syscall.SysProcAttr{
+    Cloneflags: syscall.CLONE_NEWUSER |
+      syscall.CLONE_NEWNET |
+      syscall.CLONE_NEWPID |
+      syscall.CLONE_NEWIPC |
+      syscall.CLONE_NEWUTS |
+      syscall.CLONE_NEWNS,
+    UidMappings: []syscall.SysProcIDMap{
+      {
+        ContainerID: 0,
+        HostID:      os.Getuid(),
+        Size:        1,
+      },
+    },
+    GidMappings: []syscall.SysProcIDMap{
+      {
+        ContainerID: 0,
+        HostID:      os.Getgid(),
+        Size:        1,
+      },
+    },
+  }
 
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+  cmd.Stdin = os.Stdin
+  cmd.Stdout = os.Stdout
+  cmd.Stderr = os.Stderr
   cmd.Env = []string{"PS1=-[shoten]- # "}
 
   if err := cmd.Run(); err != nil {
-		fmt.Printf("Error running the /bin/sh command - %s\n", err)
-		os.Exit(1)
-	}
+    fmt.Printf("Error running the /bin/sh command - %s\n", err)
+    os.Exit(1)
+  }
 }
 //}
 
@@ -223,41 +223,41 @@ devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=5,\
 
 //list[mount2][pivot_rootの実装][go]{
 func pivotRoot(newroot string) error {
-	putold := filepath.Join(newroot, "/oldrootfs")
+  putold := filepath.Join(newroot, "/oldrootfs")
 
-	// pivot_rootの条件を満たすために、新たなrootで自分自身をバインドマウント
+  // pivot_rootの条件を満たすために、新たなrootで自分自身をバインドマウント
   if err := syscall.Mount(
-		newroot,
-		newroot,
-		"",
-		syscall.MS_BIND|syscall.MS_REC,
-		"",
-	); err != nil {
-		return err
-	}
+    newroot,
+    newroot,
+    "",
+    syscall.MS_BIND|syscall.MS_REC,
+    "",
+  ); err != nil {
+    return err
+  }
 
-	if err := os.MkdirAll(putold, 0700); err != nil {
-		return err
-	}
+  if err := os.MkdirAll(putold, 0700); err != nil {
+    return err
+  }
 
-	if err := syscall.PivotRoot(newroot, putold); err != nil {
-		return err
-	}
+  if err := syscall.PivotRoot(newroot, putold); err != nil {
+    return err
+  }
 
-	if err := os.Chdir("/"); err != nil {
-		return err
-	}
+  if err := os.Chdir("/"); err != nil {
+    return err
+  }
 
-	putold = "/oldrootfs"
-	if err := syscall.Unmount(putold, syscall.MNT_DETACH); err != nil {
-		return err
-	}
+  putold = "/oldrootfs"
+  if err := syscall.Unmount(putold, syscall.MNT_DETACH); err != nil {
+    return err
+  }
 
-	if err := os.RemoveAll(putold); err != nil {
-		return err
-	}
+  if err := os.RemoveAll(putold); err != nil {
+    return err
+  }
 
-	return nil
+  return nil
 }
 //}
 
@@ -282,35 +282,35 @@ func pivotRoot(newroot string) error {
 
 //list[mount3][reexecを使ったコード１：main.go][go]{
 func init() {
-	reexec.Register("InitContainer", InitContainer)
-	if reexec.Init() {
-		os.Exit(0)
-	}
+  reexec.Register("InitContainer", InitContainer)
+  if reexec.Init() {
+    os.Exit(0)
+  }
 }
 
 func InitContainer() {
-	newrootPath := os.Args[1]
-	if err := pivotRoot(newrootPath); err != nil {
-		fmt.Printf("Error running pivot_root - %s\n", err)
-		os.Exit(1)
-	}
+  newrootPath := os.Args[1]
+  if err := pivotRoot(newrootPath); err != nil {
+    fmt.Printf("Error running pivot_root - %s\n", err)
+    os.Exit(1)
+  }
 
-	Run()
+  Run()
 }
 
 func Run() {
-	cmd := exec.Command("/bin/sh")
+  cmd := exec.Command("/bin/sh")
 
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+  cmd.Stdin = os.Stdin
+  cmd.Stdout = os.Stdout
+  cmd.Stderr = os.Stderr
 
-	cmd.Env = []string{"PS1=-[shoten]- # "}
+  cmd.Env = []string{"PS1=-[shoten]- # "}
 
-	if err := cmd.Run(); err != nil {
-		fmt.Printf("Error running the /bin/sh command - %s\n", err)
-		os.Exit(1)
-	}
+  if err := cmd.Run(); err != nil {
+    fmt.Printf("Error running the /bin/sh command - %s\n", err)
+    os.Exit(1)
+  }
 }
 
 func main() {
@@ -326,40 +326,40 @@ func main() {
 
 //list[mount4][reexecを使ったコード２：main.go][go]{
 func main() {
-	var rootfsPath = "/tmp/shoten/rootfs"
+  var rootfsPath = "/tmp/shoten/rootfs"
 
-	cmd := reexec.Command("InitContainer", rootfsPath)
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags: syscall.CLONE_NEWUSER |
-			syscall.CLONE_NEWNET |
-			syscall.CLONE_NEWPID |
-			syscall.CLONE_NEWIPC |
-			syscall.CLONE_NEWUTS |
-			syscall.CLONE_NEWNS,
-		UidMappings: []syscall.SysProcIDMap{
-			{
-				ContainerID: 0,
-				HostID:      os.Getuid(),
-				Size:        1,
-			},
-		},
-		GidMappings: []syscall.SysProcIDMap{
-			{
-				ContainerID: 0,
-				HostID:      os.Getgid(),
-				Size:        1,
-			},
-		},
-	}
+  cmd := reexec.Command("InitContainer", rootfsPath)
+  cmd.SysProcAttr = &syscall.SysProcAttr{
+    Cloneflags: syscall.CLONE_NEWUSER |
+      syscall.CLONE_NEWNET |
+      syscall.CLONE_NEWPID |
+      syscall.CLONE_NEWIPC |
+      syscall.CLONE_NEWUTS |
+      syscall.CLONE_NEWNS,
+    UidMappings: []syscall.SysProcIDMap{
+      {
+        ContainerID: 0,
+        HostID:      os.Getuid(),
+        Size:        1,
+      },
+    },
+    GidMappings: []syscall.SysProcIDMap{
+      {
+        ContainerID: 0,
+        HostID:      os.Getgid(),
+        Size:        1,
+      },
+    },
+  }
 
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+  cmd.Stdin = os.Stdin
+  cmd.Stdout = os.Stdout
+  cmd.Stderr = os.Stderr
 
-	if err := cmd.Run(); err != nil {
-		fmt.Printf("Error running the /bin/sh command - %s\n", err)
-		os.Exit(1)
-	}
+  if err := cmd.Run(); err != nil {
+    fmt.Printf("Error running the /bin/sh command - %s\n", err)
+    os.Exit(1)
+  }
 }
 //}
 
@@ -425,29 +425,29 @@ cpuacct.usage_user  tasks
 また、@<code>{/sys/fs/cgroup/cpu/shoten}内でもう１つ重要なファイルが@<code>{tasks}です。このファイル内では、どのプロセスをこのcontrol groupに入れるかを管理しています。複数プロセス入れることもできますが、本項ではコンテナとなるプロセス自身のみを設定しましょう。ではcgroupのコードを見ていきます。
 
 //list[cgroup3][cgroupの実装][go]{
-  func cgroup() error {
-  	if err := os.MkdirAll("/sys/fs/cgroup/cpu/shoten", 0700); err != nil {
-  		return fmt.Errorf("failed to create directory: %w", err)
-  	}
-
-  	if err := ioutil.WriteFile(
-  		"/sys/fs/cgroup/cpu/shoten/tasks",
-  		[]byte(fmt.Sprintf("%d\n", os.Getpid())),
-  		0644,
-  	); err != nil {
-  		return fmt.Errorf("failed to register tasks: %w", err)
-  	}
-
-  	if err := ioutil.WriteFile(
-  		"/sys/fs/cgroup/cpu/shoten/cpu.cfs_quota_us",
-  		[]byte("5000\n"),
-  		0644,
-  	); err != nil {
-  		return fmt.Errorf("failed to limit cpu.cfs_quota_us: %w", err)
-  	}
-
-  	return nil
+func cgroup() error {
+  if err := os.MkdirAll("/sys/fs/cgroup/cpu/shoten", 0700); err != nil {
+    return fmt.Errorf("failed to create directory: %w", err)
   }
+
+  if err := ioutil.WriteFile(
+    "/sys/fs/cgroup/cpu/shoten/tasks",
+    []byte(fmt.Sprintf("%d\n", os.Getpid())),
+    0644,
+  ); err != nil {
+    return fmt.Errorf("failed to register tasks: %w", err)
+  }
+
+  if err := ioutil.WriteFile(
+    "/sys/fs/cgroup/cpu/shoten/cpu.cfs_quota_us",
+    []byte("5000\n"),
+    0644,
+  ); err != nil {
+    return fmt.Errorf("failed to limit cpu.cfs_quota_us: %w", err)
+  }
+
+  return nil
+}
 //}
 
 とてもシンプルで、主に次の3つを行っています。
@@ -461,18 +461,18 @@ cpuacct.usage_user  tasks
 //list[cgroup4][InitContainer()の更新][go]{
 func InitContainer() {
   if err := cgroup(); err != nil {
-		fmt.Printf("Error running cgroup - %s\n", err)
-		os.Exit(1)
-	}
+    fmt.Printf("Error running cgroup - %s\n", err)
+    os.Exit(1)
+  }
 
-	...
+  ...
 
   if err := pivotRoot(newrootPath); err != nil {
-		fmt.Printf("Error running pivot_root - %s\n", err)
-		os.Exit(1)
-	}
+    fmt.Printf("Error running pivot_root - %s\n", err)
+    os.Exit(1)
+  }
 
-	Run()
+  Run()
 }
 //}
 
