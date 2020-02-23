@@ -1,6 +1,6 @@
 = GoにおけるSOLIDの原則
 @<tt>{@budougumi0617}@<fn>{bd617_twitter}です。
-オブジェクト指向設計の原則を5つまとめた@<kw>{SOLIDの原則}@<fn>{solid}（@<tti>{the SOLID principles}）という設計指針があることはみなさんご存じでしょう。
+オブジェクト指向設計の原則を5つまとめた@<kw>{SOLIDの原則}@<fn>{solid}（@<tt>{the SOLID principles}）という設計指針があることはみなさんご存じでしょう。
 本章ではSOLIDの原則にのっとった@<tt>{Go}の実装について考えます。
 
 //footnote[bd617_twitter][@<href>{https://twitter.com/budougumi0617}]
@@ -10,15 +10,15 @@
 SOLIDの原則は次の用語リストに挙げた5つのソフトウェア設計の原則の頭文字をまとめたものです。
 
 #@# textlint-disable
- : @<kw>{単一責任の原則}（@<kw>{SRP}, @<tti>{Single responsibility principle}）
+ : @<kw>{単一責任の原則}（@<kw>{SRP}, @<tt>{Single responsibility principle}）
     クラスを変更する理由は1つ以上存在してはならない。@<fn>{agile_srp}
- : @<kw>{オープン・クローズドの原則}（@<kw>{OCP}, @<tti>{Open–closed principle}）
+ : @<kw>{オープン・クローズドの原則}（@<kw>{OCP}, @<tt>{Open–closed principle}）
     ソフトウェアの構成要素構成要素（クラス、モジュール、関数など）は拡張に対して開いて（オープン: Open）いて、修正に対して閉じて（クローズド: Closed）いなければならない。@<fn>{agile_ocp}
- : @<kw>{リスコフの置換原則}（@<kw>{LSP}, @<tti>{Liskov substitution principle}）
+ : @<kw>{リスコフの置換原則}（@<kw>{LSP}, @<tt>{Liskov substitution principle}）
     @<tt>{S}型のオブジェクト@<tt>{o1}の各々に、対応する@<tt>{T}型のオブジェクト@<tt>{o2}が1つ存在し、@<tt>{T}を使って定義されたプログラム@<tt>{P}に対して@<tt>{o2}の代わりに@<tt>{o1}を使っても@<tt>{P}の振る舞いが変わらない場合、@<tt>{S}は@<tt>{T}の派生型であると言える。@<fn>{agile_lsp}
- : インターフェイス分離の原則（@<kw>{ISP}, @<tti>{Interface segregation principle}）
+ : インターフェイス分離の原則（@<kw>{ISP}, @<tt>{Interface segregation principle}）
     クライアントに、クライアントが利用しないメソッドへの依存を強制してはならない。@<fn>{agile_isp}
- : @<kw>{依存関係逆転の原則}（@<kw>{DIP},  @<tti>{Dependency inversion principle}）
+ : @<kw>{依存関係逆転の原則}（@<kw>{DIP},  @<tt>{Dependency inversion principle}）
     上位のモジュールは下位のモジュールに依存してはならない。どちらのモジュールも「抽象」に依存すべきである。「抽象」は実装の詳細に依存してはならない。実装の詳細が「抽象」に依存すべきである。@<fn>{agile_dip}
 #@# textlint-enable
 
@@ -29,8 +29,8 @@ SOLIDの原則は次の用語リストに挙げた5つのソフトウェア設�
 //footnote[agile_dip][アジャイルソフトウェア開発の奥義 第2版 11.1より]
 
 これらの原則は、ソフトウェアをより理解しやすく、より柔軟でメンテナンス性の高いものにする目的で考案されました。
-各々の原則の原案者や発表時期は異なりますが、この5つの原則から頭文字のアルファベットを1つずつ取り@<tt>{SOLIDの原則}としてまとめたのが@<i>{Robert C. Martin}です。@<fn>{getting_a_slid_start}。
-メーリングリストに投稿された@<i>{Robert C. Martin}のコメント@<fn>{ttc_of_oop}を見ると、1995年時点でオープンクローズドの原則（@<tt>{The open/closed principle}）などの命名がされていることがわかります。
+各々の原則の原案者や発表時期は異なりますが、この5つの原則から頭文字のアルファベットを1つずつ取り@<tt>{SOLIDの原則}としてまとめたのが@<i>{Robert C. Martin}氏です。@<fn>{getting_a_slid_start}。
+メーリングリストに投稿された@<i>{Robert C. Martin}氏のコメント@<fn>{ttc_of_oop}を見ると、1995年時点でオープンクローズドの原則（@<tt>{The open/closed principle}）などの命名がされていることがわかります。
 また、SOLIDの原則として5つの原則がまとめて掲載された日本語書籍は、「アジャイルソフトウェア開発の奥義」@<fn>{amzn_agile}になります。
 SOLIDの原則自体についてもっと知りたい場合は、@<tt>{@nazonohito51}さんの「@<tt>{「SOLIDの原則って何ですか？」って質問に答えたかった}@<fn>{whats-solid-principle}」を読んでみるとよいでしょう。
 
