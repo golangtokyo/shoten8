@@ -239,11 +239,36 @@ Adaptorパターン、Decoratorパターン、Compositeパターン。
 そのため、実装で契約を表現する場合はコンパイルオプションなどでリリース物からは無効化します。
 @<tt>{C++}などでは@<tt>{assert}関数を使って表現します。
 @<tt>{C#}では@<tt>{契約プログラミング}として事前条件、事後条件、およびオブジェクト不変条件をコードで指定できます @<fn>{csharp_contract}。
-
+@<tt>{Go}の場合@<tt>{assert}関数に相当する機能はないため、コードコメントによって表現することになります。
 
 //footnote[ooi][@<href>{https://www.amazon.co.jp/dp/4798111112}]
 //footnote[contract_in_library][ライブラリに関して言えば、ライブラリ利用者（開発者）に対して契約を求めることになります。]
 //footnote[csharp_contract][@<href>{https://docs.microsoft.com/ja-jp/dotnet/framework/debug-trace-profile/code-contracts}]
+
+たとえば、@<code>{io.Reader}インターフェース@<fn>{io_reader}にかかれているコメントを見てみましょう。
+次の引用は@<code>{io.Reader}インターフェースのコメントの一部です。
+
+//footnote[io_reader][@<href>{https://golang.org/pkg/io/#Reader}]
+
+#@# textlint-disable
+//quote{
+Reader is the interface that wraps the basic Read method.
+
+Read reads up to len(p) bytes into p. It returns the number of bytes read (0 <= n <= len(p)) and any error encountered. Even if Read returns n < len(p), it may use all of p as scratch space during the call. If some data is available but not len(p) bytes, Read conventionally returns what is available instead of waiting for more.
+
+...
+//}
+#@# textlint-enable
+
+コメントにはインタフェースを実装するさいに守るべき@<tt>{振る舞い}や事後条件が記載されています。
+コメントに記載があることと違う動き・事後状態になるならば、実装が契約を守っていないこと（実装側の不備）になります。
+事前条件を満たさないままインターフェースを操作していたならば、利用者側の問題と判断できます。
+
+@<tt>{LSP}をそのまま@<tt>{Go}のコードに適用はできません。
+しかし、@<tt>{LSP}の哲学は@<tt>{Go}の標準パッケージの中にも垣間見えます。
+そして我々が@<tt>{Go}を使って設計・実装する上でも取り込むべき原則の1つです。
+インターフェースを定義するときは実装に期待する振る舞いを明記しましょう。
+また、インターフェースを利用するときは事前条件や事後条件を確認し、正しい利用方法を確認しましょう。
 
 == インタフェース分離の原則（@<kw>{ISP}, @<tt>{Interface segregation principle}）
 //quote{
@@ -254,10 +279,10 @@ Adaptorパターン、Decoratorパターン、Compositeパターン。
 大きなインターフェース、複数のメソッドに依存していると他者の変更の影響を受ける可能性が高くなります。
 依存する対象が少なければ少ないほど、凝集性が高く疎結合な設計ができたといえるでしょう。
 @<tt>{Go}のプラクティスのひとつに@<tt>{インターフェースは可能な限り小さく作る}というものがあります。
-標準パッケージの@<code>{io}パッケージ@<fn>{io_reader}に含まれるインターフェースを見てみましょう。
+標準パッケージの@<code>{io}パッケージ@<fn>{io_pkg}に含まれるインターフェースを見てみましょう。
 @<list>{io_reader}は@<code>{io}パッケージに含まれるインターフェースの定義の一部です。
 
-//footnote[io_reader][@<href>{https://golang.org/pkg/io}]
+//footnote[io_pkg][@<href>{https://golang.org/pkg/io}]
 
 //list[io_reader][@<code>{io}パッケージのインターフェース]{
 type Reader interface {
