@@ -363,7 +363,7 @@ func Operation(x, y int, op string) int {
 @<tt>{契約による設計}の哲学は@<tt>{Go}で継承関係を設計する上でも有用な知識です。
 
 === @<tt>{契約による設計}
-@<tt>{契約による設計}（@<kw>{DBC}, @<tt>{Design By Controct}）は@<i>{Bertrand Meyer}氏による@<tt>{オブジェクト指向入門}@<fn>{ooi}で提唱されたテクニックです。
+　@<tt>{契約による設計}（@<kw>{DBC}, @<tt>{Design By Controct}）は@<i>{Bertrand Meyer}氏による@<tt>{オブジェクト指向入門}@<fn>{ooi}で提唱されたテクニックです。
 @<tt>{契約による設計}はシステムの利用者・ユーザーではなく@<fn>{contract_in_library}、その型、関数を利用するシステムの開発者に対して事前条件、事後条件、不変条件などを明示することです。
 契約は開発者に求める制約・条件なのでユーザー入力などの検証に使われる条件ではありません。
 そのため、実装で契約を表現する場合はコンパイルオプションなどでリリース物からは無効化します。
@@ -376,7 +376,7 @@ func Operation(x, y int, op string) int {
 //footnote[csharp_contract][@<href>{https://docs.microsoft.com/ja-jp/dotnet/framework/debug-trace-profile/code-contracts}]
 
 === @<tt>{Go}の標準インターフェースから読み解く@<tt>{契約による設計}
-たとえば、@<code>{io.Reader}インターフェース@<fn>{io_reader}にかかれているコメントを見てみましょう。
+　たとえば、@<code>{io.Reader}インターフェース@<fn>{io_reader}に記載されているコメントを見てみましょう。
 次の引用は@<code>{io.Reader}インターフェースのコメントの一部です。
 
 //footnote[io_reader][@<href>{https://golang.org/pkg/io/#Reader}]
@@ -391,11 +391,11 @@ Read reads up to len(p) bytes into p. It returns the number of bytes read (0 <= 
 //}
 #@# textlint-enable
 
-コメントにはインタフェースを実装するさいに守るべき@<tt>{振る舞い}や事後条件が記載されています。
+コメントにはインタフェースを実装する際に守るべき@<tt>{振る舞い}や事後条件が記載されています。
 コメントに記載があることと違う動き・事後状態になるならば、実装が契約を守っていないこと（実装側の不備）になります。
 事前条件を満たさないままインターフェースを操作していたならば、利用者側の問題と判断できます。
 
-=== @<tt>{リスコフの置換}と@<tt>{Go}
+=== @<tt>{リスコフの置換原則}と@<tt>{Go}
 
 @<tt>{LSP}をそのまま@<tt>{Go}のコードに適用はできません。
 しかし、@<tt>{LSP}の哲学は@<tt>{Go}の標準パッケージの中にも垣間見えます。
@@ -408,7 +408,7 @@ Read reads up to len(p) bytes into p. It returns the number of bytes read (0 <= 
 クライアントに、クライアントが利用しないメソッドへの依存を強制してはならない。
 //}
 
-@<tt>{Go}は@<code>{ISP}に強く影響を受けている言語といえます。
+　@<tt>{Go}は@<code>{ISP}に強く影響を受けている言語といえます。
 大きなインターフェース、複数のメソッドに依存していると他者の変更の影響を受ける可能性が高くなります。
 依存する対象が少なければ少ないほど、凝集性が高く疎結合な設計ができたといえるでしょう。
 @<tt>{Go}のプラクティスのひとつに@<tt>{インターフェースは可能な限り小さく作る}というものがあります。
@@ -440,7 +440,7 @@ type ReadWriteSeeker interface {
 
 ベースとなる@<code>{io.Reader}インターフェースや@<code>{io.Closer}インターフェースは1つのメソッド定義しかないシンプルなインターフェースです。
 2つを合成した入力ストリーム操作用の@<code>{io.ReadCloser}インターフェースなども定義されています。
-@<code>{Read}操作と@<code>{Close}操作は入力ストリーム処理に対する必要最小限の機能のため、@<code>{io.ReadCloser}インターフェースも単一責任の原則も満たしている最小限の依存を提供になります。
+@<code>{Read}操作と@<code>{Close}操作は入力ストリーム処理に対する必要最小限の機能のため、@<code>{io.ReadCloser}インターフェースも@<tt>{単一責任の原則}も満たしている最小限の依存を提供になります。
 
 また、@<tt>{Go}はダックタイピングによるインターフェースの継承を行うため、@<tt>{ISP}を考慮した設計が得意です。
 @<list>{sql_db}は@<code>{database/sql.DB}型の定義@<fn>{doc_sql_db}を抜粋したものです。
@@ -448,19 +448,20 @@ type ReadWriteSeeker interface {
 //footnote[doc_sql_db][@<href>{https://golang.org/pkg/database/sql/#DB}]
 
 //list[sql_db][title]{
-type DB
-    func (db *DB) Begin() (*Tx, error)
-    func (db *DB) Conn(ctx context.Context) (*Conn, error)
-    func (db *DB) Exec(query string, args ...interface{}) (Result, error)
-    func (db *DB) Ping() error
-    func (db *DB) Query(query string, args ...interface{}) (*Rows, error)
-    // ...
+type DB struct{
+  func (db *DB) Begin() (*Tx, error)
+  func (db *DB) Conn(ctx context.Context) (*Conn, error)
+  func (db *DB) Exec(query string, args ...interface{}) (Result, error)
+  func (db *DB) Ping() error
+  func (db *DB) Query(query string, args ...interface{}) (*Rows, error)
+  // more methods...
+}
 //}
 
 依存を最小にするため、インターフェースを経由して@<code>{database/sql.DB}の@<code>{Query}メソッドを扱いたいとします。
 @<code>{database/sql.DB}型には多くのメソッドが実装されていますが、必要なメソッドはひとつだけです。
 ここで、@<tt>{Go}は標準パッケージだとしても自分で定義したインターフェースを使って利用できます。
-よって@<code>{Query}メソッドしか利用しないならば、@<list>{sql_db}のように@<code>{Query}メソッドのみのインターフェースを定義すれば依存を最小限にできます。
+よって@<code>{Query}メソッドしか利用しないならば、@<list>{gueryer}のように@<code>{Query}メソッドのみもつ@<code>{Queryer}インターフェースを定義すれば依存を最小限にできます。
 
 
 //list[gueryer][@<code>{Query}メソッドのみに依存して@<code>{sql.DB}を利用する]{
@@ -482,7 +483,10 @@ func main() {
 
 こうしておくことで、@<code>{sql.DB}型のほかのメソッドが変更されたときでも
 @<code>{GetAllUsers}関数はその影響を受けることなく@<code>{sql.DB}型を利用できます。
-このような設計方針が言語思想の中に存在するため、@<tt>{Go}で@<kw>{ISP}は守りやすいです。
+
+=== @<tt>{インタフェース分離の原則}と@<tt>{Go}
+　以上のような設計方針が言語思想の中に存在し、@<tt>{Go}で@<kw>{ISP}は守りやすいです。
+3rdパーティ製ライブラリなどもこの方針に合わせて実装されている場合が多いです。 
 @<tt>{Go}の世界では、次の2点を厳守できていれば@<kw>{ISP}を守ったよいコードになるでしょう。
 
  * 自分が使わないメソッドへの依存を避ける
@@ -496,7 +500,7 @@ func main() {
 上位のモジュールは下位のモジュールに依存してはならない。どちらのモジュールも「抽象」に依存すべきである。「抽象」は実装の詳細に依存してはならない。実装の詳細が「抽象」に依存すべきである。
 //}
 
-ここまで見てきたとおり、拡張性が高く副作用に強いソフトウェアを実現するための鍵は構造化と境界です。
+　ここまで見てきたとおり、拡張性が高く副作用に強いソフトウェアを実現するための鍵は構造化と適切な境界定義です。
 対象を型あるいはパッケージとして構造化し、それぞれの境界を疎結合にすることで柔軟な設計を実現できます。
 型同士、またはパッケージ同士を疎結合にするための考え方が@<kw>{依存関係逆転の原則}です。
 @<tt>{Go}の標準パッケージ内で具体例を確認します。
@@ -508,7 +512,7 @@ func main() {
 この@<code>{database/sql}パッケージに各ベンダー、OSSの個別仕様に対応する具体的な実装は含まれていません。
 では、どのように@<tt>{MySQL}や@<tt>{PostgreSQL}を操作するかというと
 @<list>{import_mysql}のように各@<tt>{RDBMS}に対応したドライバパッケージを@<tt>{import}します。
-
+@<code>{github.com/go-sql-driver/mysql}のようなドライバパッケージは@<code>{database/sql/driver.Driver}インターフェースなどを実装しています。
 
 //list[import_mysql][@<tt>{Go}でMySQLを操作する際の@<code>{import}文]{
 import (
@@ -516,10 +520,8 @@ import (
   _ "github.com/go-sql-driver/mysql"
 )
 //}
-#@# textlint-disable
-@<code>{github.com/go-sql-driver/mysql}のようなドライバパッケージは@<code>{database/sql/driver}パッケージ内の@<code>{database/sql/driver.Driver}インターフェースなどを実装しています。
-#@# textlint-enable
-RDBMSごとの@<kw>{実装の詳細}が上位概念が提供している@<kw>{インターフェースに依存}しています。
+
+　これはRDBMSごとの@<kw>{実装の詳細}が上位概念から提供されている@<kw>{インターフェースに依存}している状態です。
 （ほぼありえないでしょうが、）もし@<code>{database/sql/driver}パッケージのインターフェースが変更された場合、すべてのドライバパッケージがインターフェースの変更に追従を迫られるでしょう。
 このような下位の実装の詳細が上位概念（@<code>{database/sql/driver}パッケージ）の抽象へ依存している関係を@<kw>{依存関係逆転の原則}と呼びます。
 
@@ -535,7 +537,7 @@ RDBMSごとの@<kw>{実装の詳細}が上位概念が提供している@<kw>{�
 
 ==== 依存性の注入（@<kw>{Dependency Injection}）
 @<kw>{依存性の注入}（@<kw>{DI}）は@<kw>{DIP}を実施するためのオーソドックスな手段です。
-JavaやC#などにはクラスのフィールド定義にアノテーションをつけるだけでオブジェクト（下位モジュールの詳細）をセット（注入）してくれるような、フレームワークが提供するデファクトな仕組みが存在します。
+@<tt>{Java}や@<tt>{C#}などにはクラスのフィールド定義にアノテーションをつけるだけでオブジェクト（下位モジュールの詳細）をセット（注入）してくれるような、フレームワークが提供するデファクトな仕組みが存在します。
 @<tt>{Go}の場合はインターフェースで抽象を定義し、初期化時などに具体的な実装の詳細オブジェクトを設定することが大半です。
 
 代表的な@<kw>{DI}の実装としては、次のような実装パターンがあります。
@@ -579,7 +581,7 @@ func main() {
 }
 //}
 
-@<list>{di_setter}は@<code>{setter}メソッドを用意していおくことで、初期化と実処理の間に依存性を注入する方法です。
+@<list>{di_setter}は@<code>{setter}メソッドを用意しておくことで、初期化と実処理の間に依存性を注入する方法です。
 
 //list[di_setter][@<code>{setter}を用意しておいて、@<kw>{DI}する方法]{
 func (app *Application) Apply(id int) error {
@@ -598,7 +600,7 @@ func main() {
 }
 //}
 
-@<list>{di_method}はメソッド（関数）の引数として依存を渡す方法です。上位階層のオブジェクトのライフサイクルと、実装の詳細のオブジェクトの生成タイミングが異なるときはこの手法を取り巻す。
+@<list>{di_method}はメソッド（関数）の引数として依存を渡す方法です。上位階層のオブジェクトのライフサイクルと、実装の詳細のオブジェクトの生成タイミングが異なるときはこの手法を取ります。
 //list[di_method][メソッド（関数）呼び出し時に@<kw>{DI}する方法]{
 func (app *Application) Apply(os OrderService, id int) error {
   return os.Apply(id)
@@ -615,7 +617,7 @@ func main() {
 
 
 === 埋込み型を利用した@<tt>{DIP}
-@<tt>{Go}は構造体の中に別の構造体やインターフェースを埋め込めます。
+　@<tt>{Go}は構造体の中に別の構造体やインターフェースを埋め込めます。
 インターフェースを埋め込むことで、抽象に依存した型を定義できます。
 インターフェースのメソッドが呼び出されるまでに何らかの方法で実装への依存を注入することで、実装の詳細が呼ばれます。
 
@@ -644,7 +646,7 @@ func main() {
 //}
 
 === @<tt>{interface}を利用しない@<tt>{DIP}
-@<tt>{DIP}では型の継承関係を利用することが多いです。
+　@<tt>{DIP}では型の継承関係を利用することが多いです。
 しかし、構造体を定義せずに関数型を用意するだけでも実現が可能です。
 @<list>{di_func}は@<code>{Application}構造体に@<code>{func(int) error}型の@<code>{Apply}フィールドを定義しています。
 @<code>{Apply}フィールドは実装に依存しない抽象です。
@@ -668,8 +670,7 @@ func main() {
 //}
 
 === 高度なツールやフレームワークを使った@<tt>{DIP}
-
-@<tt>{Go}は@<kw>{単純}であることが言語思想@<fn>{simplicity}にあるため、（ソースコードに書いてある以上の挙動を裏で実行するような）高度な@<kw>{DI}ツールはあまり使われていない印象です。
+　@<tt>{Go}は@<kw>{単純}であることが言語思想@<fn>{simplicity}にあるため、（ソースコードに書いてある以上の挙動を裏で実行するような）高度な@<kw>{DI}ツールはあまり使われていない印象です。
 @<kw>{DI}用のコードを自動生成する@<tt>{google/wire}フレームワーク@<fn>{wire}も存在しますが、
 これもコンストラクタインジェクション用のコードを自動生成するだけです。
 
