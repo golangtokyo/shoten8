@@ -1,6 +1,6 @@
 = GoにおけるSOLIDの原則
 @<tt>{@budougumi0617}@<fn>{bd617_twitter}です。
-オブジェクト指向設計の原則を5つまとめた@<kw>{SOLIDの原則}@<fn>{solid}（@<tt>{the SOLID principles}）という設計指針があることはみなさんご存じでしょう。
+オブジェクト指向設計の原則を5つまとめた@<kw>{SOLIDの原則}@<fn>{solid}（@<i>{the SOLID principles}）という設計指針があることはみなさんご存じでしょう。
 本章ではSOLIDの原則にのっとった@<tt>{Go}の実装について考えます。
 
 //footnote[bd617_twitter][@<href>{https://twitter.com/budougumi0617}]
