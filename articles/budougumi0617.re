@@ -710,7 +710,7 @@ type Knight struct {}
 var _ Jedi = (*Knight)(nil)
 //}
 
-//footnote[ensure][@<href>{https://splice.com/blog/golang-verify-type-implements-interface-compile-time/}]
+//footnote[ensure][@<href>{https://golang.org/doc/effective_go.html#blank_implements}]
 
 == 終わりに
 本章では、SOLIDの原則のおさらいをしました。
