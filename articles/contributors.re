@@ -1,8 +1,8 @@
 = 著者/デザイナー紹介
 執筆陣のプロフィールです。
 
-== @<chap>{budougumi0617} 何か書く / @<tt>{@budougumi0617}
-食べるほうのグミだよ〜。
+== @<chap>{budougumi0617} GoにおけるSOLIDの原則 / @<tt>{@budougumi0617}
+最近PHPとPythonも始めました。でもGoが一番好きです。
 
 == @<chap>{hajimehoshi} Go本体にコントリビュートする方法 / @<tt>{@hajimehoshi}
 ソフトウェアエンジニア。Goでゲームライブラリを作っている。最近白髪が増えた。
