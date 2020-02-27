@@ -80,11 +80,11 @@ GitHubのように複数のコミットを積み重ねて1つの成果物を作�
 
 次節から、@<tt>{git-codereview}のサブコマンドの解説をしていきます。
 
-=== @<tt>{help}
+=== @<kw>{help}
 
 @<tt>{git-codereview}の詳しい説明を表示します。
 
-=== @<tt>{change}
+=== @<kw>{change}
 
 現在の変更のコメントを編集します。
 ほとんどの場合において@<tt>{git commit}または@<tt>{git commit --amend}と同じです。
@@ -92,7 +92,7 @@ GitHubのように複数のコミットを積み重ねて1つの成果物を作�
 
 実際のところ、筆者はこのコマンドをあまり使わずに@<tt>{git commit --amend}してしまっています。
 
-=== @<tt>{mail}
+=== @<kw>{mail}
 
 変更をGerritに送信し、CLを作成または更新します。
 またレビュアーにメールが送信されます。
@@ -119,7 +119,7 @@ git codereview mail HEAD
 
 //footnote[chain_patch][@<href>{https://go-review.googlesource.com/c/mobile/+/210477}]
 
-=== @<tt>{gofmt}
+=== @<kw>{gofmt}
 
 @<tt>{gofmt}をかけます。
 @<tt>{change}や@<tt>{mail}前にフォーマットされているかどうかのチェックが自動でかかります。
