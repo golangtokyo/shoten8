@@ -16,9 +16,15 @@ codepen: ## Execute codepen
 build: ## Build PDF in Docker
 	@./build-in-docker.sh
 
+ebook: ## Build PDF for e-book in Docker
+	REVIEW_CONFIG_FILE=config-ebook.yml ./build-in-docker.sh
+
 # node_modulesディレクトリを削除しないので、ビルドは速いがちゃんとビルドできる保証はない。
 dirty-build: ## Build PDF without npm clean install
 	@docker run -t --rm -v ${PWD}:/book vvakame/review:4.0 /bin/bash -ci "cd /book && bundle install  && REVIEW_CONFIG_FILE=config.yml npm run pdf"
+
+dirty-ebook: ## Build PDF for e-book without npm clean install
+	@docker run -t --rm -v ${PWD}:/book vvakame/review:4.0 /bin/bash -ci "cd /book && bundle install  && REVIEW_CONFIG_FILE=config-ebook.yml npm run pdf"
 
 # 各コマンドについたコメントを表示する
 help: ## Show usages
