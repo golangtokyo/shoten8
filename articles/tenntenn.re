@@ -236,9 +236,13 @@ TEXT main.main(SB) /tmp/main.go
 //}
 
 なお、@<code>{go1.12.17}コマンドは@<code>{go}コマンドのバージョンが1.12.17であることを示しています。
-バージョンごとのGoのツールチェインをインストールしたい場合、
-は@<code>{go get golang.org/dl/go1.12.17}を実行し、@<code>{go1.12.17 download}と実行することで
+バージョンごとのGoのツールチェインをインストールしたい場合、次のようなコマンドを実行すると
 必要なものがダウンロードとインストールされます。
+
+//cmd{
+$ go get golang.org/dl/go1.12.17
+$ go1.12.17 download
+//}
 
 Go1.12では、@<code>{runtime.deferprocStack}関数が導入されていないため、@<code>{runtime.deferproc}関数が呼ばれていることが分かります。
 
