@@ -1,6 +1,6 @@
 = Go1.14で導入されたdeferのインライン展開
 
-== deferとは
+== はじめに
 
 @<code>{defer}とは関数呼び出しを遅延させるGoの機能です。
 @<code>{defer}文で予約された関数呼び出しは、
@@ -8,6 +8,8 @@
 
 本章では、@<code>{defer}の基本から@<code>{defer}の仕組み、そして
 Go1.14で導入された@<code>{defer}分のインライン展開について解説します。
+
+== deferとは
 
 @<code>{defer}は、ファイルなどのリソースの開放やロックの解除など、
 忘れてしまうと問題になる場合に使うと便利です。
@@ -23,7 +25,7 @@ func main() {
     os.Exit(1)
   }
   defer f.Close()
-  
+
   // ...(略)...
 }
 //}
@@ -424,7 +426,7 @@ func f() bool {
   defer func() {}()
   defer func() {}()
   defer func() {}()
-  
+
   return true
 }
 //}
@@ -492,7 +494,175 @@ $ go1.14 tool objdump -s "main\.main$" main.o | grep "deferproc"
 
 @<code>{for}文の繰り返し処理で記述されている@<code>{defer}文は
 インライン展開されないことが分かります。
+このようなパターンはそもそもアンチパターンであることは前述した通りであるため、
+多くの場合はインライン展開の恩恵が受けられます。
+
+インライン展開された@<code>{defer}文は、@<code>{runtime.deferproc}関数や
+@<code>{runtime.deferprocStack}関数、@<code>{runtime.deferreturn}関数などの
+ランタイム関数を用いているわけではないため、さらなるコンパイラによる最適化が期待できます。
 
 == ベンチマークで比較する
 
+さて、@<code>{defer}文のインライン展開によってどの程度パフォーマンスがよくなったのでしょうか。
+ここでは、簡単なベンチマークをとって比較してみます。
+
+ベンチマークを行うのは@<list>{bench}に示した3つの関数です。
+
+//list[bench][ベンチマーク対象のコード][go]{
+package go114defer
+
+import "sync"
+
+func DeferUnlock() {
+  var m sync.Mutex
+  m.Lock()
+  defer m.Unlock()
+}
+
+func NoDeferUnlock() {
+  var m sync.Mutex
+  m.Lock()
+  m.Unlock()
+}
+
+func ForDeferUnlock() {
+  for {
+    var m sync.Mutex
+    m.Lock()
+    defer m.Unlock()
+    break
+  }
+}
+//}
+
+@<code>{DeferUnlock}関数は@<code>{*sync.Mutex}型の
+@<code>{Lock}メソッドを呼び出してロックを取った後に
+@<code>{defer}文で@<code>{Unlock}メソッドを呼び出してアンロックしています。
+
+@<code>{NoDeferUnlock}関数は、@<code>{defer}文を使わずに
+@<code>{Unlcok}メソッドを呼び出しています。
+
+@<code>{ForDeferUnlock}関数は、@<code>{for}文の繰り返し処理の中で@<code>{defer}文を
+用いて@<code>{Unlock}メソッドを呼び出しています。
+
+これらの関数のベンチマークを行うテストコードを@<list>{bench-test}に示します。
+
+//list[bench-test][ベンチマークを行うテストコード][go]{
+package go114defer
+
+import "testing"
+
+func BenchmarkDeferUnlock(b *testing.B) {
+  b.ResetTimer()
+  for i := 0; i < b.N; i++ {
+    DeferUnlock()
+  }
+}
+
+func BenchmarkNoDeferUnlock(b *testing.B) {
+  b.ResetTimer()
+  for i := 0; i < b.N; i++ {
+    NoDeferUnlock()
+  }
+}
+
+func BenchmarkForDeferUnlock(b *testing.B) {
+  b.ResetTimer()
+  for i := 0; i < b.N; i++ {
+    ForDeferUnlock()
+  }
+}
+//}
+
+ベンチマークは次のように@<code>{go test}コマンドに
+@<code>{-bench}オプションをつけて実行します。
+
+//cmd{
+$ go test -bench .
+//}
+
+@<img>{tenntenn/chart}にGoのバージョンごとのベンチマーク結果をグラフにしたものを示します。
+なお、ベンチマーク結果は筆者のMacBook Airで行ったものです。
+
+//image[tenntenn/chart][バージョンごとのベンチマーク結果の比較]
+
+Go1.14では@<code>{defer}文がインライン展開されるため、
+@<code>{defer}文を使わない場合と大きな違いがなくなっています。
+また、@<code>{ForDeferUnlock}関数は@<code>{for}文の繰り返し処理の中で
+@<code>{defer}文を使用しているため、インライン展開されずGo1.13までと
+あまり変わらない結果になっています。
+
 == 静的単一代入形式で比較する
+
+インライン展開が行われたかどうかは、バイナリを逆アセンブルしても分かりますが、
+ここでは静的単一代入（SSA; Static Single Assignment）形式を用いて調べてみましょう。
+
+静的単一代入形式とは、コンパイラの最適化で用いられる形式で、
+変数への代入を1度だけになるように制限した形式になります。
+静的単一代入形式にすることで最適化がしやすくなるため、
+Goのコンパイラでも1.7から導入されました。@<fn>{ssa}
+
+//footnote[ssa][@<href>{https://golang.org/doc/go1.7#compiler}]
+
+Goのコンパイラでは、コードを一度、静的単一代入形式で表現し、
+そこに順に最適化処理をかけていき、最終的なオブジェクトコード（バイナリ）を生成します。
+
+コンパイル時に生成された静的単一代入形式をダンプしたい場合には、
+次のように@<code>{go tool compile}コマンドの@<code>{-d}オプションに
+@<code>{ssa/build/dump}を指定すると行えます。
+
+//cmd{
+$ go1.13.8 tool compile -d 'ssa/build/dump=main' /tmp/main.go
+$ grep defer main_01__build.dump
+  v17 = StaticCall <mem> {runtime.deferprocStack} [16] v16
+  v21 = StaticCall <mem> {runtime.deferreturn} v20
+  v19 = StaticCall <mem> {runtime.deferreturn} v18
+//}
+
+このように実行すると、@<code>{main}関数を静的単一代入形式で表現されたものが
+@<code>{main_01__build.dump}というファイルにダンプされます。
+@<code>{grep}コマンドで@<code>{defer}という文字列が含まれている部分を絞ると、
+@<code>{runtime.deferproc}関数や@<code>{runtime.deferprocStack}関数、
+@<code>{runtime.deferreturn}関数などが呼ばれているか調べてることができます。
+
+同様のコマンドをGo1.14のコンパイラで実行すると
+@<code>{defer}文がインライン展開されるため@<code>{grep}コマンドで
+何もヒットしなくなります。
+
+//cmd{
+$ go1.14 tool compile -d 'ssa/build/dump=main' /tmp/main.go
+$ grep defer main_01__build.dump
+//}
+
+最適化の過程の静的単一代入形式を取得したい場合は、コンパイルする際に
+次のように@<code>{GOSSAFUNC}環境変数を指定すると@<code>{ssa.html}ファイルが生成され、
+最適化の過程を見ることができます。
+
+//cmd{
+$ GOSSAFUNC=main go1.13.8 build /tmp/main.go
+//}
+
+@<code>{ssa.html}ファイルをブラウザで開くと@<img>{tenntenn/ssahtml}のような画面が開きます。
+
+sourcesの部分にソースコードが表示されており、最適化のフェーズによって生成される静的単一代入形式のコードが各アコーディオンペインに表示されます。
+
+ソースコードの文をクリックすると@<img>{tenntenn/ssahtml}のように、
+対応する静的単一代入形式の命令が同じ色でハイライトされます。
+
+//image[tenntenn/ssahtml][静的単一代入形式]
+
+静的単一代入形式レベルでもGo1.13では@<code>{runtime.deferprocStack}関数が呼ばれていることが分かります。
+
+== おわりに
+
+本章では、@<code>{defer}の仕組みやインライン展開について解説を行いました。
+また、逆アセンブルや静的単一代入形式のダンプの方法を解説し、
+バージョンごとに最適化が加えられていることが分かりました。
+
+ベンチマークを取ることで客観的な視点で確かにパフォーマンスが
+改善しているということも理解してもらえたでしょう。
+
+Goのコンパイラにはこのような形で最適化や改善が日々なされています。
+読者のみなさんも興味のあるアップデートを見つけて、
+コードリーディングやベンチマークなどを通して深く理解してみると
+楽しいのではないでしょうか。
