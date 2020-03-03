@@ -284,7 +284,9 @@ TEXT main.main(SB) /tmp/main.go
   :-1        0x10515df  cc                  INT $0x3
 //}
 
-また、@<code>{runtime.deferproc}関数や@<code>{runtime.deferprocStack}関数はランタイムで提供されている関数であるため、次のようにコンパイラによって生成されるバイナリにも含まれています。
+また、@<code>{runtime.deferproc}関数や@<code>{runtime.deferprocStack}関数は
+ランタイムで提供されている関数です。
+そのため、次のようにコンパイラによって生成されるバイナリにも含まれています。
 
 //cmd{
 # Go1.12のコンパイラが生成するバイナリを逆アセンブルする
