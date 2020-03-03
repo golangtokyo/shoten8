@@ -470,6 +470,9 @@ $ go1.14 tool objdump -s "main\.f$" main.o | grep "deferproc"
 つまり、関数@<code>{f}に記述されている9つの@<code>{defer}文は
 インライン展開されていないことが分かります。
 
+
+== for文とインライン展開
+
 Go1.14の@<code>{defer}文のインライン展開は、
 1つの関数で9つ以上@<code>{defer}文があるとインライン展開しないことが分かります。
 
