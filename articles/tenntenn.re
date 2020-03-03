@@ -1,7 +1,5 @@
 = Go1.14で導入されたdeferのインライン展開
 
-== はじめに
-
 @<code>{defer}とは関数呼び出しを遅延させるGoの機能です。
 @<code>{defer}文で予約された関数呼び出しは、
 @<code>{defer}文が記述された関数の終了時に呼び出されます。
@@ -14,7 +12,7 @@ Go1.14で導入された@<code>{defer}分のインライン展開について解
 @<code>{defer}は、ファイルなどのリソースの開放やロックの解除など、
 忘れてしまうと問題になる場合に使うと便利です。
 
-例えば、関数終了時にファイルを閉じたい場合は、
+たとえば、関数終了時にファイルを閉じたい場合は、
 @<list>{defer-file}のように記述できます。
 
 //list[defer-file][関数終了時にファイルを閉じる][go]{
@@ -42,7 +40,7 @@ func main() {
 また、@<code>{defer}文で関数実行を遅延させる際の引数は、
 実行時に評価される訳ではなく@<code>{defer}文が実行された時点で評価されます。
 
-例えば、@<list>{defer-multi}のように1つの関数で
+たとえば、@<list>{defer-multi}のように1つの関数で
 複数の@<code>{defer}文を記述した場合を考えます。
 
 //list[defer-multi][複数のdefer文と引数の扱い][go]{
@@ -60,7 +58,7 @@ func main() {
 
 変数@<code>{msg}の値は、@<code>{main}関数中で変化していきます。
 実際に@<code>{defer}文で遅延実行される@<code>{fmt.Println}関数の引数となるのは、
-ひとつめが@<code>{"!!!"}でふたつめが@<code>{"world"}になります。
+1つ目が@<code>{"!!!"}で2つ目が@<code>{"world"}になります。
 
 そのため、@<list>{defer-multi}を実行すると次のような結果になります。
 @<code>{defer}文で呼び出されていない@<code>{fmt.Println("hello")}が最初に実行され、
@@ -80,7 +78,7 @@ world
 そのため、@<code>{for}文の繰り返し処理で@<code>{defer}文を用いても、
 関数終了時まで実行されません。
 
-例えば、@<list>{defer-for}のように繰り返し処理でファイルを開き、
+たとえば、@<list>{defer-for}のように繰り返し処理でファイルを開き、
 @<code>{defer}文でファイルを閉じています。
 
 //list[defer-for][繰り返し処理でdefer文を用いるアンチパターン][go]{
@@ -132,16 +130,16 @@ func readFile(fn string) error {
 どのような仕組みで遅延実行されているのでしょうか。
 
 @<code>{defer}文を使った遅延実行は、2つの処理に分けられます。
-ひとつめは、関数と引数を登録する処理で、ランタイムで定義されている
+1つ目は、関数と引数を登録する処理で、ランタイムで定義されている
 @<code>{runtime.deferproc}関数が用いられます。
 @<code>{runtime.deferproc}関数は、遅延実行させる関数や引数へのポインタをヒープに確保します。
 しかし、Go1.13からは可能な場合は@<code>{runtime.deferprocStack}関数を用いることによって、
 スタックに確保するようにしています。
 
-ふたつめは、実際に予約した関数を実行する処理で、@<code>{runtime.deferreturn}関数で行れます。
+2つ目は、実際に予約した関数を実行する処理で、@<code>{runtime.deferreturn}関数で行れます。
 @<code>{defer}文が複数ある場合は、逆順で@<code>{runtime.deferreturn}が実行されます。
 
-例えば、@<list>{defer-a-b}のように2つの関数、@<code>{a}と@<code>{b}を
+たとえば、@<list>{defer-a-b}のように2つの関数、@<code>{a}と@<code>{b}を
 それぞれ引数@<code>{10}と@<code>{20}で@<code>{defer}文で呼び出していた場合を考えます。
 
 //list[defer-a-b][関数aとbをdefer文で呼び出す][go]{
@@ -176,7 +174,7 @@ Goコンパイラによって生成されたバイナリを逆アセンブルす
 @<code>{runtime.deferproc}関数や@<code>{runtime.deferretrun}関数が
 呼ばれているか確認できます。
 
-例えば、@<list>{simple}のようなコードをビルドし、
+たとえば、@<list>{simple}のようなコードをビルドし、
 @<code>{go tool objdump}コマンドで逆アセンブルを行います。
 
 //list[simple][defer文で関数を呼び出すシンプルな例][go]{
@@ -338,7 +336,7 @@ Go1.13で導入された@<code>{runtime.deferprocStack}関数を用いた最適�
 //footnote[go114-defer-cl][@<href>{https://go-review.googlesource.com/c/go/+/190098}]
 //footnote[go114][@<href>{https://golang.org/doc/go1.14#runtime}]
 
-例えば、@<list>{go114-defer}のようなコードがあった場合を考えます。
+たとえば、@<list>{go114-defer}のようなコードがあった場合を考えます。
 @<code>{defer f1(a)}は無条件で@<code>{defer f2(b)}は
 @<code>{cond}が@<code>{true}になる場合に実行されます。
 
@@ -659,10 +657,10 @@ sourcesの部分にソースコードが表示されており、最適化のフ�
 また、逆アセンブルや静的単一代入形式のダンプの方法を解説し、
 バージョンごとに最適化が加えられていることが分かりました。
 
-ベンチマークを取ることで客観的な視点で確かにパフォーマンスが
-改善しているということも理解してもらえたでしょう。
+ベンチマークを取ることで客観的な視点でパフォーマンスが
+改善しているということを知ることがでました。
 
 Goのコンパイラにはこのような形で最適化や改善が日々なされています。
-読者のみなさんも興味のあるアップデートを見つけて、
+読者のみなさんも興味のあるアップデートをみつけて、
 コードリーディングやベンチマークなどを通して深く理解してみると
 楽しいのではないでしょうか。
