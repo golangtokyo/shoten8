@@ -71,6 +71,27 @@ world
 !!!
 //}
 
+@<code>{defer}文で予約された関数呼び出しは、パニックが発生しても実行されます。
+たとえば、@<list>{defer-panic}のように@<code>{defer}文で実行を予約した関数で
+@<code>{recover}関数を呼び出すことで発生したパニックを回復させることが可能です。
+
+//list[defer-panic][defer文でrecover関数を呼び出す][go]{
+package main
+
+import "fmt"
+
+func main() {
+  defer func() {
+    // パニックが起きても呼び出される
+    if r := recover(); r != nil {
+      fmt.Println(r)
+    }
+  }()
+  panic("PANIC")
+  // これより下に書いた処理は実行されない
+}
+//}
+
 == deferのアンチパターン
 
 @<code>{defer}文で予約された関数呼び出しは、
@@ -503,8 +524,9 @@ $ go1.14 tool objdump -s "main\.main$" main.o | grep "deferproc"
 
 @<code>{for}文の繰り返し処理で記述されている@<code>{defer}文は
 インライン展開されないことが分かります。
-このようなパターンはそもそもアンチパターンであることは前述したとおりであるため、
-多くの場合はインライン展開の恩恵が受けられます。
+しかし、このようなパターンは"deferのアンチパターン"で
+述べたとおりアンチパターンです。
+そのため、多くの場合はインライン展開の恩恵が受けられるでしょう。
 
 インライン展開された@<code>{defer}文は、@<code>{runtime.deferproc}関数や
 @<code>{runtime.deferprocStack}関数、@<code>{runtime.deferreturn}関数などの
