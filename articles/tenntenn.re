@@ -5,7 +5,7 @@
 @<code>{defer}文が記述された関数の終了時に呼び出されます。
 
 本章では、@<code>{defer}の基本から@<code>{defer}の仕組み、そして
-Go1.14で導入された@<code>{defer}分のインライン展開について解説します。
+Go1.14で導入された@<code>{defer}文のインライン展開について解説します。
 
 == deferとは
 
@@ -157,7 +157,7 @@ func readFile(fn string) error {
 しかし、Go1.13からは可能な場合は@<code>{runtime.deferprocStack}関数を用いることによって、
 スタックに確保するようにしています。
 
-2つ目は、実際に予約した関数を実行する処理で、@<code>{runtime.deferreturn}関数で行れます。
+2つ目は、実際に予約した関数を実行する処理で、@<code>{runtime.deferreturn}関数で行われます。
 @<code>{defer}文が複数ある場合は、逆順で@<code>{runtime.deferreturn}が実行されます。
 
 たとえば、@<list>{defer-a-b}のように2つの関数、@<code>{a}と@<code>{b}を
@@ -173,11 +173,11 @@ func f() {
 //}
 
 @<list>{defer-a-b}のコードは、
-コンパイラによって@<list>{deferprocStack-deferretrun}のような処理に分解されます。
-@<list>{deferprocStack-deferretrun}に示したコードは擬似コードですが、
+コンパイラによって@<list>{deferprocStack-deferreturn}のような処理に分解されます。
+@<list>{deferprocStack-deferreturn}に示したコードは擬似コードですが、
 コンパイラが生成するオブジェクトコードも似たような処理になります。
 
-//list[deferprocStack-deferretrun][runtime.deferprocStack関数とruntime.deferretrun関数][go]{
+//list[deferprocStack-deferreturn][runtime.deferprocStack関数とruntime.deferreturn関数][go]{
 // ※このコードは擬似コード
 
 runtime.deferprocStack(a)
@@ -192,7 +192,7 @@ runtime.deferreturn(a)
 == 逆アセンブルして比較する
 
 Goコンパイラによって生成されたバイナリを逆アセンブルすることで、
-@<code>{runtime.deferproc}関数や@<code>{runtime.deferretrun}関数が
+@<code>{runtime.deferproc}関数や@<code>{runtime.deferreturn}関数が
 呼ばれているか確認できます。
 
 たとえば、@<list>{simple}のようなコードをビルドし、
@@ -364,7 +364,7 @@ Go1.13で導入された@<code>{runtime.deferprocStack}関数を用いた最適�
 //footnote[go114][@<href>{https://golang.org/doc/go1.14#runtime}]
 
 たとえば、@<list>{go114-defer}のようなコードがあった場合を考えます。
-@<code>{defer f1(a)}は無条件で@<code>{defer f2(b)}は
+@<code>{defer f1(a)}は無条件で実行され、@<code>{defer f2(b)}は
 @<code>{cond}が@<code>{true}になる場合に実行されます。
 
 //list[go114-defer][コンパイル前のdefer文を使ったコード][go]{
